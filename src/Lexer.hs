@@ -10,12 +10,12 @@ data Token
   | TokenSymbol String
   | TokenString String
   | TokenInt Int
+  | TokenDouble Double
   | TokenInputs
   | TokenOutputs
   | TokenLParen
   | TokenRParen
-  | TokenComma
-  
+  | TokenComma  
   deriving (Show, Eq)
 
 parseError :: [Token] -> a
@@ -40,19 +40,27 @@ lexer (c:cs)
       | isSpace c = lexer cs
       | isSymbolStart c = lexSymbol (c:cs)
       | isDigit c = lexInt (c:cs)
+      | c == '-' = lexInt (c:cs)
       | c == '"' = lexString cs []
 lexer ('(':cs) = TokenLParen : lexer cs
 lexer (')':cs) = TokenRParen : lexer cs
 lexer (',':cs) = TokenComma : lexer cs
 lexer cs = error ("Unexpected token at "++cs)
 
+isNumChar ch = isDigit ch || ch == '-' || ch == '.'
+
 lexInt :: String -> [Token]
 lexInt s =
-  TokenInt intValue : lexer restChars
+  if isDouble then
+    TokenDouble doubleValue : lexer restChars
+  else
+    TokenInt intValue : lexer restChars
   where
-    digits = takeWhile isDigit s
-    restChars = dropWhile isDigit s
+    digits = takeWhile isNumChar s
+    isDouble = '.' `elem` digits
+    restChars = dropWhile isNumChar s
     intValue = read digits
+    doubleValue = read digits
 
 lexSymbol :: String -> [Token]
 lexSymbol s =

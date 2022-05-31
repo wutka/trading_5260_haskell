@@ -45,4 +45,16 @@ loadCountryResources filename = do
   where
     makeResourceList fields countryNumbers =
       (getCsvString (head countryNumbers) , Map.fromList (zip fields (map getCsvInt (tail countryNumbers))))
+
+loadScoringFormula :: String -> IO [ScoreParameter]
+loadScoringFormula filename = do
+  csvInfo <- loadCSV filename
+  return $ map parseScoreParameter (tail csvInfo)
+
+parseScoreParameter :: [CsvItem] -> ScoreParameter
+parseScoreParameter [fieldItem,weightItem,constantItem,CsvString "Ratio",ratioField] =
+  RatioScore (getCsvString fieldItem) (getCsvDouble weightItem) (getCsvDouble constantItem)
+             (getCsvString ratioField)
+parseScoreParameter x =
+  error ("Unable to parse scoring parameter: "++show x)
   

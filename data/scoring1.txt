@@ -1,0 +1,16 @@
+Field,Weight,Constant,Type,Param
+Water,1.0,1.0,Ratio,Population
+MetallicAlloys,1.0,1.0,Ratio,Population
+Timber,1.0,1.0,Ratio,Population
+Farm,1.0,1.0,Ratio,Population
+Electronics,1.0,1.0,Ratio,Population
+Housing,1.0,1.0,Ratio,Population
+Food,1.0,1.0,Ratio,Population
+PotentialEnergyUsable,1.0,1.0,Ratio,Population
+PopulationWaste,-0.5,1.0,Ratio,Population
+FarmWaste,-0.5,1.0,Ratio,Population
+MetallicAlloysWaste,-0.5,1.0,Ratio,Population
+ElectronicsWaste,-0.5,1.0,Ratio,Population
+HousingWaste,-0.5,1.0,Ratio,Population
+FoodWaste,-0.5,1.0,Ratio,Population
+PotentialEnergyWaste,-0.5,1.0,Ratio,Population

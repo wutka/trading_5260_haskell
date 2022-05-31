@@ -20,6 +20,7 @@ import Resources
     sym { TokenSymbol $$ }
     str { TokenString $$ }
     int { TokenInt $$ }
+    double { TokenDouble $$ }
     '(' { TokenLParen }
     ')' { TokenRParen }
     ',' { TokenComma }
@@ -35,6 +36,10 @@ Operation : '(' transform sym '(' inputs ResList ')' '(' outputs ResList ')' ')'
 CsvLine : CsvLineRev { reverse $1 }
 
 CsvLineRev : CsvLineRev ',' str { CsvString $3 : $1 }
+           | CsvLineRev ',' sym { CsvString $3 : $1 }
            | CsvLineRev ',' int { CsvInt $3 : $1 }
+           | CsvLineRev ',' double { CsvDouble $3 : $1 }
            | str { [CsvString $1] }
+           | sym { [CsvString $1] }
            | int { [CsvInt $1] }
+           | double { [CsvDouble $1] }

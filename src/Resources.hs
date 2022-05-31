@@ -28,8 +28,13 @@ type CountryResources = Map.Map String ResourceMap
 data CsvItem =
   CsvString String
   | CsvInt Int
+  | CsvDouble Double
   deriving (Eq, Show)
 
+data ScoreParameter =
+  RatioScore String Double Double String
+  deriving (Eq, Show)
+               
 instance Show ResourceAmount where
   show (ResourceAmount res amt) = "(" ++ res ++ " " ++ show amt ++ ")"
   
@@ -48,6 +53,11 @@ getCsvString x = error ("Attempted to get Csv string from "++show x)
 getCsvInt :: CsvItem -> Int
 getCsvInt (CsvInt i) = i
 getCsvInt x = error ("Attempted to get Csv int from "++show x)
+
+getCsvDouble :: CsvItem -> Double
+getCsvDouble (CsvDouble d) = d
+getCsvDouble (CsvInt i) = fromIntegral i
+getCsvDouble x = error ("Attempted to get Csv double from "++show x)
 
 isTransform :: Operation -> Bool
 isTransform (OpTransform _) = True
@@ -89,3 +99,13 @@ greatestMultiplier rm (OpTransform (Transform _ inputs _)) =
   foldl' (greatestResMultiplier rm) maxBound inputs
 greatestMultiplier rm (OpTransfer (Transfer _ _ resources)) =
   foldl' (greatestResMultiplier rm) maxBound resources
+
+computeScore :: ResourceMap -> [ScoreParameter] -> Double
+computeScore rm =
+  foldl' (applyScore rm) 0.0
+
+applyScore :: ResourceMap -> Double -> ScoreParameter -> Double
+applyScore rm currScore (RatioScore field weight constant proportionField) =
+  currScore + (fromIntegral $ rm Map.! field) * weight * constant /
+              (fromIntegral $ rm Map.! proportionField)
+  
