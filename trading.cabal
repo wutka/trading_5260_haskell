@@ -47,8 +47,6 @@ executable trading
     -- other-extensions:
     build-depends:
         base ^>=4.14.3.0,
-        text,
-        s-cargot,
         trading
 
     hs-source-dirs:   app

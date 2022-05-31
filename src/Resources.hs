@@ -1,25 +1,25 @@
 module Resources where
 
 import qualified Data.Map as Map
+import Data.List
 
 data Transform = Transform { country :: String,
                              inputs :: [ResourceAmount],
                              outputs :: [ResourceAmount] }
                deriving (Eq)
+
+data Transfer = Transfer { fromCountry :: String,
+                           toCountry :: String,
+                           resources :: [ResourceAmount] }
+  deriving (Eq)
                  
 data ResourceAmount = ResourceAmount { resource :: String,
                                        amount :: Int }
                     deriving (Eq)
 
-data Transfer = Transfer { fromCountry :: String,
-                           toCountry :: String,
-                           resources :: [ResourceAmount] }
-              deriving (Eq)
-
-data SpecItem = SpecTransform Transform | SpecTransfer Transfer
-  deriving (Eq, Show)
-
-newtype Spec = Spec [SpecItem]
+data Operation =
+    OpTransfer Transfer
+  | OpTransform Transform
   deriving (Eq, Show)
 
 type ResourceMap = Map.Map String Int
@@ -49,3 +49,43 @@ getCsvInt :: CsvItem -> Int
 getCsvInt (CsvInt i) = i
 getCsvInt x = error ("Attempted to get Csv int from "++show x)
 
+isTransform :: Operation -> Bool
+isTransform (OpTransform _) = True
+isTransform _ = False
+
+isTransfer :: Operation -> Bool
+isTransfer (OpTransfer _) = True
+isTransfer _ = False
+
+getTransform :: Operation -> Maybe Transform
+getTransform (OpTransform t) = Just t
+getTransform _ = Nothing
+
+getTransfer :: Operation -> Maybe Transfer
+getTransfer (OpTransfer t) = Just t
+getTransfer _ = Nothing
+
+multiplyResource :: Int -> ResourceAmount -> ResourceAmount
+multiplyResource n (ResourceAmount resource amount) = ResourceAmount resource (amount * n)
+
+createTransformOp :: String -> Int -> Transform -> Operation
+createTransformOp country multiplier (Transform _ inputs outputs) =
+  OpTransform $ Transform country (map (multiplyResource multiplier) inputs)
+                          (map (multiplyResource multiplier) outputs)
+
+createTransferOp :: String -> String -> Int -> Transfer -> Operation
+createTransferOp fromCountry toCountry multiplier (Transfer _ _ resources) =
+  OpTransfer $ Transfer fromCountry toCountry (map (multiplyResource multiplier) resources)
+
+greatestResMultiplier :: ResourceMap -> Int -> ResourceAmount -> Int
+greatestResMultiplier rm currMax (ResourceAmount name amt) =
+  min currMax bestMultiplier
+  where
+    resourceValue = rm Map.! name
+    bestMultiplier = resourceValue `div` amt
+  
+greatestMultiplier :: ResourceMap -> Operation -> Int
+greatestMultiplier rm (OpTransform (Transform _ inputs _)) =
+  foldl' (greatestResMultiplier rm) maxBound inputs
+greatestMultiplier rm (OpTransfer (Transfer _ _ resources)) =
+  foldl' (greatestResMultiplier rm) maxBound resources

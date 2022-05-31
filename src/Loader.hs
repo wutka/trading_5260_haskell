@@ -2,21 +2,32 @@ module Loader where
 
 import System.Directory
 import Data.List
+import Data.Maybe
 import Resources
 import Parser
 import Lexer
 import qualified Data.Map as Map
 
-loadTransform :: String -> IO SpecItem
-loadTransform filename = do
+-- Loads an operation from a file
+loadOperation :: String -> IO Operation
+loadOperation filename = do
+  -- Read the file
   contents <- readFile filename
+  -- Parse the operation
   return $ opParser $ lexer contents
-  
-loadTransforms :: String -> IO [SpecItem]
-loadTransforms dir = do
+
+-- Loads operations from files ending in .tmpl from the named directory
+loadOperations :: String -> IO [Operation]
+loadOperations dir = do
   files <- getDirectoryContents dir
   let templates = map ((dir ++ "/") ++) $ filter (isSuffixOf ".tmpl") files
-  mapM loadTransform templates
+  mapM loadOperation templates
+
+-- Loads all tranforms from files ending in .tmpl from the named directory  
+loadTransforms :: String -> IO [Transform]
+loadTransforms dir = do
+  tlist <- loadOperations dir
+  return $ mapMaybe getTransform tlist
 
 
 loadCSV :: String -> IO [[CsvItem]]
