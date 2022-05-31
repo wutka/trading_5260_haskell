@@ -22,6 +22,7 @@ library
     exposed-modules:  Resources
                     , Lexer
                     , Parser
+                    , Loader
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -30,6 +31,8 @@ library
     -- other-extensions:
     build-depends:    base ^>=4.14.3.0
                     , array
+                    , directory
+                    , containers
     build-tools:      happy
     hs-source-dirs:   src
     default-language: Haskell2010

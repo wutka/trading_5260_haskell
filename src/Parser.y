@@ -7,6 +7,7 @@ import Resources
 }
 
 %name opParser Operation
+%name csvLineParser CsvLine
 
 %tokentype { Token }
 %error { parseError }
@@ -17,9 +18,11 @@ import Resources
     inputs { TokenInputs }
     outputs { TokenOutputs }
     sym { TokenSymbol $$ }
+    str { TokenString $$ }
     int { TokenInt $$ }
     '(' { TokenLParen }
     ')' { TokenRParen }
+    ',' { TokenComma }
 %%
 
 Operation : '(' transform sym '(' inputs ResList ')' '(' outputs ResList ')' ')'
@@ -28,4 +31,10 @@ Operation : '(' transform sym '(' inputs ResList ')' '(' outputs ResList ')' ')'
 
  ResList : '(' sym int ')' ResList { ResourceAmount $2 $3 : $5 }
          | { [] }
- 
+
+CsvLine : CsvLineRev { reverse $1 }
+
+CsvLineRev : CsvLineRev ',' str { CsvString $3 : $1 }
+           | CsvLineRev ',' int { CsvInt $3 : $1 }
+           | str { [CsvString $1] }
+           | int { [CsvInt $1] }

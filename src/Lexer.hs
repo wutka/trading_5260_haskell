@@ -8,11 +8,13 @@ data Token
   = TokenTransform
   | TokenTransfer
   | TokenSymbol String
+  | TokenString String
   | TokenInt Int
   | TokenInputs
   | TokenOutputs
   | TokenLParen
   | TokenRParen
+  | TokenComma
   
   deriving (Show, Eq)
 
@@ -38,8 +40,10 @@ lexer (c:cs)
       | isSpace c = lexer cs
       | isSymbolStart c = lexSymbol (c:cs)
       | isDigit c = lexInt (c:cs)
+      | c == '"' = lexString cs []
 lexer ('(':cs) = TokenLParen : lexer cs
 lexer (')':cs) = TokenRParen : lexer cs
+lexer (',':cs) = TokenComma : lexer cs
 lexer cs = error ("Unexpected token at "++cs)
 
 lexInt :: String -> [Token]
@@ -68,3 +72,8 @@ lexSymbol s =
     restChars = dropWhile isSymbolChar s
     
     
+lexString :: String -> String -> [Token]
+lexString [] acc = [TokenString $ reverse acc]
+lexString ('"':'"':l) acc = lexString l ('"':acc)
+lexString ('"':l) acc = TokenString (reverse acc) : lexer l
+lexString (lc:l) acc = lexString l (lc:acc)
