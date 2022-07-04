@@ -22,6 +22,9 @@ data Operation =
   | OpTransform Transform
   deriving (Eq, Show)
 
+data ScheduleItem =
+  ScheduleItem Operation Double
+  
 type ResourceMap = Map.Map String Int
 type CountryResources = Map.Map String ResourceMap
 
@@ -87,6 +90,31 @@ createTransferOp :: String -> String -> Int -> Transfer -> Operation
 createTransferOp fromCountry toCountry multiplier (Transfer _ _ resources) =
   OpTransfer $ Transfer fromCountry toCountry (map (multiplyResource multiplier) resources)
 
+
+applyOp :: CountryResources -> Operation -> Int -> Country
+applyOp cr (OpTransform (Transform country inputs outputs)) mult =
+  Map.insert country afterOutputs cr
+  where
+    rm = cr Map.! country
+    afterInputs = foldl' applyInputs rm inputs
+    afterOutputs = foldl' applyOutputs afterInputs outputs
+    applyInputs rm (ResourceAmount res amt) =
+      Map.adjust ((-amt*mult) +) res rm
+    applyOutputs rm (ResourceAmount res amt) =
+      Map.adjust ((amt*mult) +) res rm
+applyOp cr (OpTransfer (Transfer fromCountry toCountry amounts)) mult =
+  Map.insert fromCountry transferredFrom $
+  Map.insert toCountry transferredTo cr
+  where
+    fromRm = cr Map.! fromCountry
+    toRm = cr Map.! toCountry
+    transferredFrom = foldl' transferFrom fromRm amounts
+    transferredTo = foldl' transferTo toRm amounts
+    transferFrom rm (ResourceAmount res amt) =
+      Map.adjust ((-amt*mult) +) res rm
+    transferTo rm (ResourceAmount res amt) =
+      Map.adjust ((-amt*mult) +) res rm  
+
 greatestResMultiplier :: ResourceMap -> Int -> ResourceAmount -> Int
 greatestResMultiplier rm currMax (ResourceAmount name amt) =
   min currMax bestMultiplier
@@ -108,4 +136,17 @@ applyScore :: ResourceMap -> Double -> ScoreParameter -> Double
 applyScore rm currScore (RatioScore field weight constant proportionField) =
   currScore + (fromIntegral $ rm Map.! field) * weight * constant /
               (fromIntegral $ rm Map.! proportionField)
-  
+
+makeScorePair :: ResourceMap -> Operation -> [ScoreParameter] -> Int -> (Operation, Double)
+makeScorePair = (multipliedOp, score)
+  where
+    multipliedOp =
+      
+bestOperationQuantities :: ResourceMap -> Operation -> [ScoreParameter] -> [Operation]
+bestOperationQuantities rm op scoring =
+  map fst sortedQuantities
+  where
+    sortedQuantities = sortOn compareScores quantities
+    compareScores (_,s1) (_,s2) = compare s1 s2
+    quantities = map (makeScorePair rm op scoring) [1..(greatestMultiplier rm op)]
+
