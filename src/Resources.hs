@@ -91,7 +91,7 @@ createTransferOp fromCountry toCountry multiplier (Transfer _ _ resources) =
   OpTransfer $ Transfer fromCountry toCountry (map (multiplyResource multiplier) resources)
 
 
-applyOp :: CountryResources -> Operation -> Int -> Country
+applyOp :: CountryResources -> Operation -> Int -> CountryResources
 applyOp cr (OpTransform (Transform country inputs outputs)) mult =
   Map.insert country afterOutputs cr
   where
@@ -115,6 +115,17 @@ applyOp cr (OpTransfer (Transfer fromCountry toCountry amounts)) mult =
     transferTo rm (ResourceAmount res amt) =
       Map.adjust ((-amt*mult) +) res rm  
 
+multiplyOp :: Operation -> Int -> Operation
+multiplyOp (OpTransform (Transform country inputs outputs)) mult =
+  OpTransform (Transform country multInputs multOutputs)
+  where
+    multInputs = map (multiplyResource mult) inputs
+    multOutputs = map (multiplyResource mult) outputs
+multiplyOp (OpTransfer (Transfer fromCountry toCountry amounts)) mult =
+  OpTransfer (Transfer fromCountry toCountry multAmounts)
+  where
+    multAmounts = map (multiplyResource mult) amounts
+  
 greatestResMultiplier :: ResourceMap -> Int -> ResourceAmount -> Int
 greatestResMultiplier rm currMax (ResourceAmount name amt) =
   min currMax bestMultiplier
@@ -122,11 +133,15 @@ greatestResMultiplier rm currMax (ResourceAmount name amt) =
     resourceValue = rm Map.! name
     bestMultiplier = resourceValue `div` amt
   
-greatestMultiplier :: ResourceMap -> Operation -> Int
-greatestMultiplier rm (OpTransform (Transform _ inputs _)) =
+greatestMultiplier :: CountryResources -> Operation -> Int
+greatestMultiplier cr (OpTransform (Transform source inputs _)) =
   foldl' (greatestResMultiplier rm) maxBound inputs
-greatestMultiplier rm (OpTransfer (Transfer _ _ resources)) =
+  where
+    rm = cr Map.! source
+greatestMultiplier cr (OpTransfer (Transfer from _ resources)) =
   foldl' (greatestResMultiplier rm) maxBound resources
+  where
+    rm = cr Map.! from
 
 computeScore :: ResourceMap -> [ScoreParameter] -> Double
 computeScore rm =
@@ -137,16 +152,25 @@ applyScore rm currScore (RatioScore field weight constant proportionField) =
   currScore + (fromIntegral $ rm Map.! field) * weight * constant /
               (fromIntegral $ rm Map.! proportionField)
 
-makeScorePair :: ResourceMap -> Operation -> [ScoreParameter] -> Int -> (Operation, Double)
-makeScorePair = (multipliedOp, score)
+allScores :: CountryResources -> [ScoreParameter] -> Map.Map String Double
+allScores cr scoreParams =
+  Map.map getScore cr
   where
-    multipliedOp =
-      
-bestOperationQuantities :: ResourceMap -> Operation -> [ScoreParameter] -> [Operation]
-bestOperationQuantities rm op scoring =
+    getScore rm = computeScore rm scoreParams
+    
+makeScorePair :: CountryResources -> String -> Operation -> [ScoreParameter] -> Int -> (Operation, Double)
+makeScorePair cr self op scoreParams multiplier =
+  (multipliedOp, score)
+  where
+    multipliedOp = multiplyOp op multiplier
+    appliedCR = applyOp cr op multiplier
+    score = computeScore (appliedCR Map.! self) scoreParams
+              
+bestOperationQuantities :: CountryResources -> String -> Operation -> [ScoreParameter] -> [Operation]
+bestOperationQuantities cr self op scoring =
   map fst sortedQuantities
   where
-    sortedQuantities = sortOn compareScores quantities
+    sortedQuantities = sortBy compareScores quantities
     compareScores (_,s1) (_,s2) = compare s1 s2
-    quantities = map (makeScorePair rm op scoring) [1..(greatestMultiplier rm op)]
+    quantities = map (makeScorePair cr self op scoring) [1..(greatestMultiplier cr op)]
 
