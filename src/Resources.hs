@@ -166,11 +166,11 @@ makeScorePair cr self op scoreParams multiplier =
     appliedCR = applyOp cr op multiplier
     score = computeScore (appliedCR Map.! self) scoreParams
               
-bestOperationQuantities :: CountryResources -> String -> Operation -> [ScoreParameter] -> [Operation]
-bestOperationQuantities cr self op scoring =
-  map fst sortedQuantities
-  where
-    sortedQuantities = sortBy compareScores quantities
+bestOperationQuantities :: CountryResources -> String -> [ScoreParameter] -> Operation -> [ScheduleItem]
+bestOperationQuantities cr self scoring op =
+  map makeScheduleItem $ sortBy compareScores quantities
+  where                     
     compareScores (_,s1) (_,s2) = compare s1 s2
     quantities = map (makeScorePair cr self op scoring) [1..(greatestMultiplier cr op)]
+    makeScheduleItem (op, score) = ScheduleItem op score
 
