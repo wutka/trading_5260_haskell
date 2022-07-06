@@ -4,8 +4,6 @@ import Resources
 
 import Data.PQueue.Max as PQMax
 
-data PlanItem = PlanItem Int [ScheduleItem]
-
 data PQItem = PQItem Double PlanItem 
 
 instance Eq PQItem where
@@ -16,6 +14,9 @@ instance Ord PQItem where
   
 
 data PriorityQueue = PriorityQueue Int (PQMax.MaxQueue PQItem)
+
+createQueue :: Int -> PriorityQueue
+createQueue n = PriorityQueue n (PQMax.empty)
 
 getNext :: PriorityQueue -> (Maybe PlanItem, PriorityQueue)
 getNext (PriorityQueue maxSize queue) =

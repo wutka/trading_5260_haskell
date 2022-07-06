@@ -37,7 +37,10 @@ data CsvItem =
 data ScoreParameter =
   RatioScore String Double Double String
   deriving (Eq, Show)
-               
+
+data PlanItem = PlanItem Int [ScheduleItem] CountryResources
+  deriving (Show)
+
 instance Show ResourceAmount where
   show (ResourceAmount res amt) = "(" ++ res ++ " " ++ show amt ++ ")"
   
@@ -49,6 +52,9 @@ instance Show Transform where
 instance Show Transfer where
   show (Transfer from to res) = "(TRANSFER "++from++" "++to++" ("++unwords (map show res)++"))"
 
+instance Show ScheduleItem where
+  show (ScheduleItem op eu) =
+    show op ++ " EU: " ++ show eu
 getCsvString :: CsvItem -> String
 getCsvString (CsvString s) = s
 getCsvString x = error ("Attempted to get Csv string from "++show x)

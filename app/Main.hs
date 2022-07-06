@@ -1,7 +1,14 @@
 module Main where
 
 import Resources
+import Loader
+import Planner
+
 
 main :: IO ()
 main = do
-  putStrLn "Hello, Haskell!"
+  transforms <- loadTransforms "data/transforms"
+  scoring <- loadScoringFormula "data/scoring1.txt"
+  countries <- loadCountryResources "data/resources.csv"
+  let schedule = computeSchedule countries "Atlantis" 6 1000 transforms scoring
+  putStrLn $ "[" ++ unlines (map show schedule) ++ "]"
