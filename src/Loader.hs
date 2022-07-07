@@ -61,9 +61,11 @@ loadScoringFormula filename = do
   return $ map parseScoreParameter (tail csvInfo)
 
 parseScoreParameter :: [CsvItem] -> ScoreParameter
-parseScoreParameter [fieldItem,weightItem,constantItem,CsvString "Ratio",ratioField] =
-  RatioScore (getCsvString fieldItem) (getCsvDouble weightItem) (getCsvDouble constantItem)
-             (getCsvString ratioField)
+parseScoreParameter [fieldItem,weightItem,CsvString "Ratio",ratioField] =
+  RatioScore (getCsvString fieldItem) (getCsvDouble weightItem) (getCsvString ratioField)
+parseScoreParameter [fieldItem,weightItem,targetItem,CsvString "TargetedRatio",ratioField] =
+  TargetedRatioScore (getCsvString fieldItem) (getCsvDouble weightItem)
+                     (getCsvDouble targetItem) (getCsvString ratioField)
 parseScoreParameter x =
   error ("Unable to parse scoring parameter: "++show x)
   

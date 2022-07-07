@@ -2,6 +2,7 @@ module Resources where
 
 import qualified Data.Map as Map
 import Data.List
+import Debug.Trace
 
 data Transform = Transform { country :: String,
                              inputs :: [ResourceAmount],
@@ -35,7 +36,8 @@ data CsvItem =
   deriving (Eq, Show)
 
 data ScoreParameter =
-  RatioScore String Double Double String
+  RatioScore String Double String
+  | TargetedRatioScore String Double Double String
   deriving (Eq, Show)
 
 data PlanItem = PlanItem Int Double [ScheduleItem] CountryResources
@@ -154,9 +156,16 @@ computeScore rm =
   foldl' (applyScore rm) 0.0
 
 applyScore :: ResourceMap -> Double -> ScoreParameter -> Double
-applyScore rm currScore (RatioScore field weight constant proportionField) =
-  currScore + (fromIntegral $ rm Map.! field) * weight * constant /
+applyScore rm currScore (RatioScore field weight proportionField) =
+  currScore + (fromIntegral $ rm Map.! field) * weight /
               (fromIntegral $ rm Map.! proportionField)
+applyScore rm currScore (TargetedRatioScore field weight target proportionField) =
+  trace ("applyScore = "++show v++" from target "++show target++" for ratio "++show ratio++" field "++field) v
+  where    
+  v = currScore + weight * (target - (abs (target - ratio)))
+  ratio = (fromIntegral $ rm Map.! field) /
+          (fromIntegral $ rm Map.! proportionField)
+  
 
 allScores :: CountryResources -> [ScoreParameter] -> Map.Map String Double
 allScores cr scoreParams =
