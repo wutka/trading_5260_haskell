@@ -38,7 +38,7 @@ data ScoreParameter =
   RatioScore String Double Double String
   deriving (Eq, Show)
 
-data PlanItem = PlanItem Int [ScheduleItem] CountryResources
+data PlanItem = PlanItem Int Double [ScheduleItem] CountryResources
   deriving (Show)
 
 instance Show ResourceAmount where

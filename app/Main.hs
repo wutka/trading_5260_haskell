@@ -10,5 +10,5 @@ main = do
   transforms <- loadTransforms "data/transforms"
   scoring <- loadScoringFormula "data/scoring1.txt"
   countries <- loadCountryResources "data/resources.csv"
-  let schedule = computeSchedule countries "Atlantis" 6 1000 transforms scoring
+  let schedule = computeSchedule countries "Atlantis" 6 1000 10 transforms scoring
   putStrLn $ "[" ++ unlines (map show schedule) ++ "]"
