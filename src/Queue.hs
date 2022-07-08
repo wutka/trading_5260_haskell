@@ -40,7 +40,7 @@ getNext (PriorityQueue maxSize nextKey maxQueue minQueue) =
 
 -- Adds an item to the queue
 addItem :: PriorityQueue -> PlanItem -> PriorityQueue
-addItem (PriorityQueue maxSize currKey maxQueue minQueue) val@(PlanItem _ priority _ _) =
+addItem (PriorityQueue maxSize currKey maxQueue minQueue) val@(PlanItem _ priority _ _ _ _) =
   -- Clean the queue, make sure it doesn't exceed the bounds
   cleanQueue $
   -- Create a new PQ instance adding the item with its negative score (since PSQ only

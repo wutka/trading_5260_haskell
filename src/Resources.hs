@@ -51,7 +51,7 @@ data ScoreParameter =
   deriving (Eq, Show)
 
 -- The next step in planning (this is what is stored in the frontier)
-data PlanItem = PlanItem Int Double [ScheduleItem] CountryResources
+data PlanItem = PlanItem Int Double Double Double [ScheduleItem] CountryResources
   deriving (Show)
 
 instance Show ResourceAmount where
@@ -167,7 +167,7 @@ applyOp cr (OpTransfer (Transfer fromCountry toCountry amounts)) mult =
       Map.adjust (checkResourceAdjustment fromCountry res (-amt*mult)) res rm
     -- Adds a resource
     transferTo rm (ResourceAmount res amt) =
-      Map.adjust ((-amt*mult) +) res rm  
+      Map.adjust ((amt*mult) +) res rm  
 
 -- Multiplies the amounts in an operation by a multiplier
 multiplyOp :: Operation -> Int -> Operation
@@ -335,5 +335,33 @@ getTransfers cr self fromCountry toCountry scoring =
     -- Compute the score for the self country for this transfer
     score = computeScore rm scoring
     
+-- Compute P for op
+computeP :: CountryResources -> String -> [ScoreParameter] -> Operation -> Double
+computeP cr self scoring op =
+  foldl' multCountryP 1.0 (Map.keys newCr)
+  where
+    newCr = applyOp cr op 1
+    multCountryP prod country = prod * (computeCountryP cr newCr self country scoring op)
+
+-- Compute P for op for particular country
+computeCountryP :: CountryResources -> CountryResources -> String -> String -> [ScoreParameter] -> Operation -> Double
+computeCountryP _ _ _ _ _ (OpTransform _) = 1.0
+computeCountryP oldCr newCr self country scoring (OpTransfer (Transfer from to _)) =
+  if country == self then
+    1.0
+  else if country /= from && country /= to then
+    1.0
+  else
+    sigmoid
+  where
+    countryOldRm = oldCr Map.! country
+    countryNewRm = newCr Map.! country
+    countryOldScore = computeScore countryOldRm scoring
+    countryNewScore = computeScore countryNewRm scoring
+    countryDr = countryNewScore - countryOldScore
+    sigmoid = 1.0 / (1.0 + exp (-countryDr))
+  
+
+      
     
     
