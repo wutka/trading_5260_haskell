@@ -14,7 +14,7 @@ computeSchedule :: CountryResources -> String -> Int -> Int -> Int -> [Transform
 computeSchedule cm self depthBound frontierMaxSize numSchedules transforms scoring  =
   bestSchedules
   where
-    allSchedules = iterateSchedule cm self depthBound transforms scoring initQueue scheduleQueue
+    allSchedules = iterateSchedule cm self depthBound transforms scoring initQueue scheduleQueue 0
     bestSchedules = map getPISchedule $ allQueueItems allSchedules
     getPISchedule (PlanItem _ _ s _) = s
     compareSchedules slist1 slist2 = compare (schedEu $ last slist1) (schedEu $ last slist2)
@@ -27,12 +27,17 @@ computeSchedule cm self depthBound frontierMaxSize numSchedules transforms scori
 addNextItem :: PriorityQueue -> PlanItem -> PriorityQueue
 addNextItem queue item = addItem queue item
 
-iterateSchedule :: CountryResources -> String -> Int -> [Transform] -> [ScoreParameter] -> PriorityQueue -> PriorityQueue -> PriorityQueue
-iterateSchedule cm self depthBound transforms scoring queue itemQueue =
+iterateSchedule :: CountryResources -> String -> Int -> [Transform] -> [ScoreParameter] -> PriorityQueue -> PriorityQueue -> Int -> PriorityQueue
+iterateSchedule cm self depthBound transforms scoring queue itemQueue iterations =
+--  trace ("Next item is "++show nextItem)
+  (
   if isNothing nextItem then
-    itemQueue
-  else 
-    iterateSchedule cm self depthBound transforms scoring nextQueue (addItem itemQueue (fromJust nextItem))
+    trace ("Total iterations: "++show iterations) itemQueue
+  else if nextDepth >= depthBound then
+    iterateSchedule cm self depthBound transforms scoring currQueue (addItem itemQueue (fromJust nextItem)) (iterations+1)
+  else
+    iterateSchedule cm self depthBound transforms scoring nextQueue (addItem itemQueue (fromJust nextItem)) (iterations+1)
+  )
   where
     (nextItem, currQueue) = getNext queue    
     (PlanItem nextDepth nextPriority nextSchedule _) = fromJust nextItem
@@ -44,6 +49,6 @@ getMoves self transforms scoring (PlanItem currDepth _ currSched planCr) =
   map makePlanItemScore allOperations
   where
     selfTransformOps = map (createTransformOp self 1) transforms
-    allOperations = concatMap (bestOperationQuantities planCr self scoring) selfTransformOps
+    allOperations = concatMap (\x -> take 10 $ bestOperationQuantities planCr self scoring x) selfTransformOps
     makePlanItemScore si@(ScheduleItem op score) = PlanItem (currDepth+1) score (currSched ++ [si]) (applyOp planCr op 1)
 

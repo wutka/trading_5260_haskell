@@ -4,6 +4,7 @@ import Resources
 
 import Data.Maybe
 import Data.PSQueue
+import Debug.Trace
 
 data PQItem = PQItem Int PlanItem
 
@@ -34,10 +35,13 @@ addItem (PriorityQueue maxSize currKey maxQueue minQueue) val@(PlanItem _ priori
 
 cleanQueue :: PriorityQueue -> PriorityQueue
 cleanQueue pq@(PriorityQueue maxSize nextKey maxQueue minQueue) =
+--  trace ("Queue size: "++show (size maxQueue))
+  (
   if size maxQueue <= maxSize then
     pq
   else
     PriorityQueue maxSize nextKey (delete item maxQueue) (deleteMin minQueue)
+  )
   where
     (item :-> _) = fromJust (findMin minQueue)
 

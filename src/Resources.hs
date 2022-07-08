@@ -157,15 +157,27 @@ computeScore rm =
 
 applyScore :: ResourceMap -> Double -> ScoreParameter -> Double
 applyScore rm currScore (RatioScore field weight proportionField) =
-  currScore + (fromIntegral $ rm Map.! field) * weight /
-              (fromIntegral $ rm Map.! proportionField)
-applyScore rm currScore (TargetedRatioScore field weight target proportionField) =
-  trace ("applyScore = "++show v++" from target "++show target++" for ratio "++show ratio++" field "++field) v
-  where    
-  v = currScore + weight * (target - (abs (target - ratio)))
-  ratio = (fromIntegral $ rm Map.! field) /
-          (fromIntegral $ rm Map.! proportionField)
-  
+  trace ("RatioScore for "++field++": "++show score++"  weight: "++show weight)
+  currScore + score
+  where
+    score = (fromIntegral $ rm Map.! field) * weight /
+            (fromIntegral $ rm Map.! proportionField)
+applyScore rm currScore sc@(TargetedRatioScore field weight target proportionField) =
+  trace ("TargetedRatioScore for "++field++": "++show score)
+  currScore + score
+  where
+    score = weight * level
+    dist = abs (getTargetedDiff rm sc)
+    level = 1.0 / (1.0 + log (1.0 + fromIntegral dist))
+
+getTargetedDiff :: ResourceMap -> ScoreParameter -> Int
+getTargetedDiff rm (RatioScore _ _ _) = error "can't getTargetedDiff on RatioScore"
+getTargetedDiff rm (TargetedRatioScore field weight target proportionField) =
+  actualVal - targetValue
+  where
+    denom = fromIntegral $ rm Map.! proportionField
+    targetValue = floor (target * denom)
+    actualVal = fromIntegral $ rm Map.! field
 
 allScores :: CountryResources -> [ScoreParameter] -> Map.Map String Double
 allScores cr scoreParams =
@@ -189,3 +201,25 @@ bestOperationQuantities cr self scoring op =
     quantities = map (makeScorePair cr self op scoring) [1..(greatestMultiplier cr op)]
     makeScheduleItem (op, score) = ScheduleItem op score
 
+getTargetedResourceDifference :: ResourceMap -> [ScoreParameter] -> Bool -> [(String,Int)]
+getTargetedResourceDifference rm scoring getShortfall =
+  map adjust $ filter lessMore $ map makePair $ filter isTargetRatio scoring
+  where
+    isTargetRatio (RatioScore _ _ _) = False
+    isTargetRatio (TargetedRatioScore _ _ _ _) = True
+    makePair (RatioScore _ _ _) = error "can't makePair on RatioScore"
+    makePair sc@(TargetedRatioScore field _ _ _) = (field, getTargetedDiff rm sc)
+    lessMore (f,amt) = (getShortfall && (amt < 0)) || (not getShortfall && (amt > 0))
+    adjust (f,amt) = (f,abs amt)
+
+getExcessResources :: CountryResources -> String -> [ScoreParameter] -> [(String,Int)]
+getExcessResources cr country scoring =
+  getTargetedResourceDifference rm scoring False
+  where
+    rm = cr Map.! country
+
+getShortfallResources :: CountryResources -> String -> [ScoreParameter] -> [(String,Int)]
+getShortfallResources cr country scoring =
+  getTargetedResourceDifference rm scoring True
+  where
+    rm = cr Map.! country
