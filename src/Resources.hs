@@ -99,6 +99,12 @@ createTransferOp fromCountry toCountry multiplier (Transfer _ _ resources) =
   OpTransfer $ Transfer fromCountry toCountry (map (multiplyResource multiplier) resources)
 
 
+checkResourceAdjustment :: String -> String -> Int -> Int -> Int
+checkResourceAdjustment country res adj val =
+  if adj+val >= 0 then adj+val
+  else
+    error $ "Invalid adjustment to resource "++res++" in "++country++" "++show adj++"+"++show val
+
 applyOp :: CountryResources -> Operation -> Int -> CountryResources
 applyOp cr (OpTransform (Transform country inputs outputs)) mult =
   Map.insert country afterOutputs cr
@@ -107,7 +113,7 @@ applyOp cr (OpTransform (Transform country inputs outputs)) mult =
     afterInputs = foldl' applyInputs rm inputs
     afterOutputs = foldl' applyOutputs afterInputs outputs
     applyInputs rm (ResourceAmount res amt) =
-      Map.adjust ((-amt*mult) +) res rm
+      Map.adjust (checkResourceAdjustment country res (-amt*mult)) res rm
     applyOutputs rm (ResourceAmount res amt) =
       Map.adjust ((amt*mult) +) res rm
 applyOp cr (OpTransfer (Transfer fromCountry toCountry amounts)) mult =
@@ -119,7 +125,7 @@ applyOp cr (OpTransfer (Transfer fromCountry toCountry amounts)) mult =
     transferredFrom = foldl' transferFrom fromRm amounts
     transferredTo = foldl' transferTo toRm amounts
     transferFrom rm (ResourceAmount res amt) =
-      Map.adjust ((-amt*mult) +) res rm
+      Map.adjust (checkResourceAdjustment fromCountry res (-amt*mult)) res rm
     transferTo rm (ResourceAmount res amt) =
       Map.adjust ((-amt*mult) +) res rm  
 
@@ -146,6 +152,7 @@ greatestMultiplier cr (OpTransform (Transform source inputs _)) =
   foldl' (greatestResMultiplier rm) maxBound inputs
   where
     rm = cr Map.! source
+    
 greatestMultiplier cr (OpTransfer (Transfer from _ resources)) =
   foldl' (greatestResMultiplier rm) maxBound resources
   where
@@ -157,16 +164,16 @@ computeScore rm =
 
 applyScore :: ResourceMap -> Double -> ScoreParameter -> Double
 applyScore rm currScore (RatioScore field weight proportionField) =
-  trace ("RatioScore for "++field++": "++show score++"  weight: "++show weight)
+--  trace ("RatioScore for "++field++": "++show score++"  weight: "++show weight)
   currScore + score
   where
     score = (fromIntegral $ rm Map.! field) * weight /
             (fromIntegral $ rm Map.! proportionField)
 applyScore rm currScore sc@(TargetedRatioScore field weight target proportionField) =
-  trace ("TargetedRatioScore for "++field++": "++show score)
+--  trace ("TargetedRatioScore for "++field++": "++show score)
   currScore + score
   where
-    score = weight * level
+    score = weight - fromIntegral dist
     dist = abs (getTargetedDiff rm sc)
     level = 1.0 / (1.0 + log (1.0 + fromIntegral dist))
 
@@ -223,3 +230,26 @@ getShortfallResources cr country scoring =
   getTargetedResourceDifference rm scoring True
   where
     rm = cr Map.! country
+
+getTransfers :: CountryResources -> String -> String -> String -> [ScoreParameter] -> Maybe ScheduleItem
+getTransfers cr self fromCountry toCountry scoring =
+  if null transfers then
+    Nothing
+  else
+    Just $ ScheduleItem (makeTransferItem transfers) score
+  where
+    excessResources = getExcessResources cr fromCountry scoring
+    shortfallResources = getShortfallResources cr toCountry scoring
+    allResourceMap = Map.unionWith min (Map.fromList excessResources) (Map.fromList shortfallResources)    
+    transferResources = map fst excessResources `intersect` map fst shortfallResources
+    transfers = map (makeResourceAmount . kvpair) transferResources
+    kvpair k = (k, allResourceMap Map.! k)    
+    matchResource resources (res,amt) = res `elem` resources
+    makeResourceAmount (res,amt) = ResourceAmount res amt
+    makeTransferItem transfers =
+      OpTransfer (Transfer fromCountry toCountry transfers)
+    rm = cr Map.! self
+    score = computeScore rm scoring
+    
+    
+    
