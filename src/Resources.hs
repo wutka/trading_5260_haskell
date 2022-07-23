@@ -1,4 +1,4 @@
-module Resources where
+Tmodule Resources where
 
 import qualified Data.Map as Map
 import Data.List ( foldl', intersect, sortBy )

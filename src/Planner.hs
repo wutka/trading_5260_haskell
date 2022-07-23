@@ -7,19 +7,28 @@ import Data.List
 import Debug.Trace
 import qualified Data.Map as Map
 
+data PlannerConfig = PlannerConfig {
+  country :: String,
+  depthBound :: Int,
+  frontierMaxSize :: Int,
+  numSchedules :: Int,
+  gamma :: Double,
+  scoring :: [ScoreParameter] }
+                   deriving (Eq, Show)
+
 --def my_country_scheduler (your_country_name, resources_filename,
 --                         initial_state_filename,  output_schedule_filename,
 --                         num_output_schedules, depth_bound, frontier_max_size)
 
 -- Compute a list of schedules for the given country with the
 -- specified bounding parameters, transforms, and scoring parameters
-computeSchedule :: CountryResources -> String -> Int -> Int -> Int -> Double -> [Transform] -> [ScoreParameter] -> [[ScheduleItem]]
-computeSchedule cm self depthBound frontierMaxSize numSchedules gamma transforms scoring  =
+computeSchedule :: CountryResources -> PlannerConfig -> [Transform] -> [[ScheduleItem]]
+computeSchedule cm pc@(PlannerConfig self depthBound frontierMaxSize numSchedules gamma scoring) transforms =
   bestSchedules
   where
     baseScore = computeScore (cm Map.! self) scoring
     -- Compute all the schedules
-    allSchedules = iterateSchedule cm self baseScore otherCountries depthBound gamma transforms scoring initQueue scheduleQueue 0
+    allSchedules = iterateSchedule cm pc baseScore otherCountries transforms initQueue scheduleQueue 0
     -- Convert each PlanItem to a schedule
     bestSchedules = map getPISchedule $ allQueueItems allSchedules
     getPISchedule (PlanItem _ _ _ _ s _) = s
