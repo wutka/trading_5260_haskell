@@ -169,6 +169,11 @@ applyOp cr (OpTransfer (Transfer fromCountry toCountry amounts)) mult =
     transferTo rm (ResourceAmount res amt) =
       Map.adjust ((amt*mult) +) res rm  
 
+applySchedule :: CountryResources -> [ScheduleItem] -> CountryResources
+applySchedule cr [] = cr
+applySchedule cr ((ScheduleItem op _):scheduleRest) =
+  applySchedule (applyOp cr op 1) scheduleRest
+  
 -- Multiplies the amounts in an operation by a multiplier
 multiplyOp :: Operation -> Int -> Operation
 multiplyOp (OpTransform (Transform country inputs outputs)) mult =
