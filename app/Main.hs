@@ -26,7 +26,7 @@ main = do
   -- Load the country resources
   countries <- loadCountryResources resourcesFile
   -- Compute the schedules
-  let countries = runGame countries maxDepth frontierSize numSchedules gamma transforms scoring turns []
+  let turnResults = startGame countries maxDepth frontierSize numSchedules gamma transforms scoring turns
   -- Print the schedules
 --  putStrLn $ "[" ++ unlines (map show schedule) ++ "]"
   putStrLn "foo"

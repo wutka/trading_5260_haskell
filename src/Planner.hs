@@ -108,3 +108,11 @@ makePlanItem cr pc@(PlannerConfig self otherCountries depthBound frontierMaxSize
     -- There are probably no failures right now because transfers are
     -- computed in a way that benefits everyone
     eu = (newP * dr) + (1.0 - newP) * (-10.0)
+
+acceptSchedule :: CountryResources -> PlannerConfig -> [ScheduleItem] -> Bool
+acceptSchedule cr (PlannerConfig self _ _ _ _ _ scoring _) schedule =
+  finalScore - initialScore >= 0
+  where
+    initialScore = computeScore (cr Map.! self) scoring
+    finalScore = computeScore (applySchedule cr schedule Map.! self) scoring
+  
