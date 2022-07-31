@@ -15,7 +15,23 @@ data Token
   | TokenOutputs
   | TokenLParen
   | TokenRParen
-  | TokenComma  
+  | TokenComma
+  | TokenStar
+  | TokenSlash
+  | TokenPlus
+  | TokenMinus
+  | TokenEqual
+  | TokenNotEqual
+  | TokenGreater
+  | TokenGreaterEqual
+  | TokenLess
+  | TokenLessEqual
+  | TokenAnd
+  | TokenOr
+  | TokenNot
+  | TokenComputedField
+  | TokenUpdatedField
+  | TokenThreshold
   deriving (Show, Eq)
 
 parseError :: [Token] -> a
@@ -45,13 +61,28 @@ lexer (c:cs)
 lexer ('(':cs) = TokenLParen : lexer cs
 lexer (')':cs) = TokenRParen : lexer cs
 lexer (',':cs) = TokenComma : lexer cs
+lexer ('*':cs) = TokenStar : lexer cs
+lexer ('/':cs) = TokenSlash : lexer cs
+lexer ('+':cs) = TokenPlus : lexer cs
+lexer ('>':'=':cs) = TokenGreaterEqual : lexer cs
+lexer ('>':cs) = TokenGreater : lexer cs
+lexer ('<':'=':cs) = TokenLessEqual : lexer cs
+lexer ('<':cs) = TokenLess : lexer cs
+lexer ('=':cs) = TokenEqual : lexer cs
+lexer ('!':'=':cs) = TokenNotEqual : lexer cs
+lexer ('!':cs) = TokenNot : lexer cs
+lexer ('&':'&':cs) = TokenAnd : lexer cs
+lexer ('|':'|':cs) = TokenOr : lexer cs
+
 lexer cs = error ("Unexpected token at "++cs)
 
 isNumChar ch = isDigit ch || ch == '-' || ch == '.'
 
 lexInt :: String -> [Token]
 lexInt s =
-  if isDouble then
+  if isMinus then
+    TokenMinus : lexer restChars
+  else if isDouble then
     TokenDouble doubleValue : lexer restChars
   else
     TokenInt intValue : lexer restChars
@@ -61,6 +92,7 @@ lexInt s =
     restChars = dropWhile isNumChar s
     intValue = read digits
     doubleValue = read digits
+    isMinus = digits == "-"
 
 lexSymbol :: String -> [Token]
 lexSymbol s =
@@ -72,6 +104,12 @@ lexSymbol s =
     TokenInputs : lexer restChars
   else if lowerSymChars == "outputs" then
     TokenOutputs : lexer restChars
+  else if lowerSymChars == "computedfield" then
+    TokenComputedField : lexer restChars
+  else if lowerSymChars == "updatedfield" then
+    TokenUpdatedField : lexer restChars
+  else if lowerSymChars == "threshold" then
+    TokenThreshold : lexer restChars
   else
     TokenSymbol symChars : lexer restChars
   where

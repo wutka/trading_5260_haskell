@@ -12,7 +12,8 @@ import Resources
       ScoreParameter(..),
       CsvItem(CsvString),
       Operation,
-      Transform )
+      Transform,
+      ResourceUpdate)
 import Parser
 import Lexer
 import qualified Data.Map as Map
@@ -76,3 +77,16 @@ parseScoreParameter [fieldItem,baseScore,weightItem,targetItem,CsvString "Target
 parseScoreParameter x =
   error ("Unable to parse scoring parameter: "++show x)
   
+loadUpdates :: String -> IO [ResourceUpdate]
+loadUpdates filename = do
+  contents <- readFile filename
+  return $ map parseUpdateLine $ filter noComments $ lines contents
+
+noComments :: String -> Bool
+noComments [] = False
+noComments ('#':_) = False
+noComments _ = True
+
+parseUpdateLine :: String -> ResourceUpdate
+parseUpdateLine l = updateParser $ lexer l
+

@@ -27,6 +27,33 @@ data Operation =
   | OpTransform Transform
   deriving (Eq, Show)
 
+data ResourceExpression =
+    REFieldRef String
+  | REAdd ResourceExpression ResourceExpression
+  | RESubtract ResourceExpression ResourceExpression
+  | REMultiply ResourceExpression ResourceExpression
+  | REDivide ResourceExpression ResourceExpression
+  | REConstant Double
+  deriving (Eq, Show)
+
+data ResourceComparison =
+    RCAnd ResourceComparison ResourceComparison
+  | RCOr ResourceComparison ResourceComparison
+  | RCNot ResourceComparison
+  | RCEqual ResourceExpression ResourceExpression
+  | RCNotEqual ResourceExpression ResourceExpression
+  | RCGreater ResourceExpression ResourceExpression
+  | RCGreaterEqual ResourceExpression ResourceExpression
+  | RCLess ResourceExpression ResourceExpression
+  | RCLessEqual ResourceExpression ResourceExpression
+  deriving (Eq,Show)
+
+data ResourceUpdate =
+    RUComputedField String String ResourceExpression
+  | RUUpdatedField String String ResourceExpression
+  | RUThreshold String ResourceComparison String ResourceExpression
+  deriving (Eq,Show)
+
 -- An item in a schedule has an operation and an expected utility
 data ScheduleItem =
   ScheduleItem Operation Double
@@ -367,6 +394,72 @@ computeCountryP oldCr newCr self country scoring (OpTransfer (Transfer from to _
     sigmoid = 1.0 / (1.0 + exp (-countryDr))
   
 
+evaluateResourceExpression :: ResourceMap -> ResourceExpression -> Double
+evaluateResourceExpression rm (REFieldRef field) = fromIntegral $ rm Map.! field
+evaluateResourceExpression _ (REConstant v) = v
+evaluateResourceExpression rm (REAdd l r) = evalExprOp rm (+) l r
+evaluateResourceExpression rm (RESubtract l r) = evalExprOp rm (-) l r
+evaluateResourceExpression rm (REMultiply l r) = evalExprOp rm (*) l r
+evaluateResourceExpression rm (REDivide l r) =
+  if rval == 0.0 then
+    fromIntegral $ snd $ floatRange rval
+  else
+    lval / rval
+  where
+    lval = evaluateResourceExpression rm l
+    rval = evaluateResourceExpression rm r
+evalExprOp rm op l r = op lval rval
+  where
+    lval = evaluateResourceExpression rm l
+    rval = evaluateResourceExpression rm r
+
+evaluateResourceComparison rm (RCGreater l r) = evalCompExprOp rm (>) l r
+evaluateResourceComparison rm (RCGreaterEqual l r) = evalCompExprOp rm (>=) l r
+evaluateResourceComparison rm (RCLess l r) = evalCompExprOp rm (<) l r
+evaluateResourceComparison rm (RCLessEqual l r) = evalCompExprOp rm (<=) l r
+evaluateResourceComparison rm (RCEqual l r) = evalCompExprOp rm (==) l r
+evaluateResourceComparison rm (RCNotEqual l r) = evalCompExprOp rm (/=) l r
+evaluateResourceComparison rm (RCAnd l r) = evalCompOp rm (&&) l r
+evaluateResourceComparison rm (RCOr l r) = evalCompOp rm (||) l r
+evaluateResourceComparison rm (RCNot l) = not (evaluateResourceComparison rm l)
+
+evalCompExprOp rm op l r = op lval rval
+  where
+    lval = evaluateResourceExpression rm l
+    rval = evaluateResourceExpression rm r
+
+evalCompOp rm op l r = op lval rval
+  where
+    lval = evaluateResourceComparison rm l
+    rval = evaluateResourceComparison rm r
+
+applyResourceUpdate :: ResourceMap -> ResourceUpdate -> ResourceMap
+applyResourceUpdate rm (RUComputedField desc field expr) =
+  if val >= 0 then
+    Map.insert field val rm
+  else
+    Map.insert field 0 rm
+  where
+    val = floor (evaluateResourceExpression rm expr)    
+applyResourceUpdate rm (RUUpdatedField desc field expr) =
+  if val >= 0 then
+    Map.insert field val rm
+  else
+    Map.insert field 0 rm
+  where
+    val = floor $ evaluateResourceExpression rm expr
+applyResourceUpdate rm (RUThreshold desc threshold field expr) =
+  if evaluateResourceComparison rm threshold then
+    if val >= 0 then
+      Map.insert field val rm
+    else
+      Map.insert field 0 rm
+  else
+    rm
+  where
+    val = floor (evaluateResourceExpression rm expr)
       
-    
+
+applyResourceUpdates :: ResourceMap -> [ResourceUpdate] -> ResourceMap
+applyResourceUpdates = foldl' applyResourceUpdate
     

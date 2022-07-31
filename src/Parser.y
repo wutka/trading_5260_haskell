@@ -8,6 +8,7 @@ import Resources
 
 %name opParser Operation
 %name csvLineParser CsvLine
+%name updateParser UpdateLine
 
 %tokentype { Token }
 %error { parseError }
@@ -24,6 +25,22 @@ import Resources
     '(' { TokenLParen }
     ')' { TokenRParen }
     ',' { TokenComma }
+    '*' { TokenStar }
+    '/' { TokenSlash }
+    '+' { TokenPlus }
+    '-' { TokenMinus }
+    '=' { TokenEqual }
+    NE { TokenNotEqual }
+    '>' { TokenGreater }
+    GE { TokenGreaterEqual }
+    '<' { TokenLess }
+    LE {TokenLessEqual }
+    AND { TokenAnd }
+    OR { TokenOr }
+    NOT { TokenNot }
+    computedField { TokenComputedField }
+    updatedField { TokenUpdatedField }
+    threshold { TokenThreshold }
 %%
 
 Operation : '(' transform sym '(' inputs ResList ')' '(' outputs ResList ')' ')'
@@ -43,3 +60,32 @@ CsvLineRev : CsvLineRev ',' str { CsvString $3 : $1 }
            | sym { [CsvString $1] }
            | int { [CsvInt $1] }
            | double { [CsvDouble $1] }
+
+ExpressionPart : sym { REFieldRef $1 }
+             | int { REConstant (fromIntegral $1) }
+             | double { REConstant $1 }
+             | '(' Expression ')' { $2 }
+
+ExMulDivPart : ExMulDivPart '*' ExMulDivPart { REMultiply $1 $3 }
+             | ExMulDivPart '/' ExMulDivPart { REDivide $1 $3 }
+             | ExpressionPart { $1 }
+
+Expression : Expression '+' Expression { REAdd $1 $3 }
+             | Expression '-' Expression { RESubtract $1 $3 }
+             | ExMulDivPart { $1 }
+
+CompBase : Expression '>' Expression { RCGreater $1 $3 }
+         | Expression GE Expression { RCGreaterEqual $1 $3 }
+         | Expression '<' Expression { RCLess $1 $3 }
+         | Expression LE Expression { RCLessEqual $1 $3 }
+         | Expression '=' Expression { RCEqual $1 $3 }
+         | Expression NE Expression { RCNotEqual $1 $3 }
+
+Comparison : Comparison AND Comparison { RCAnd $1 $3 }
+           | Comparison OR Comparison { RCOr $1 $3 }
+           | NOT Comparison { RCNot $2 }
+           | CompBase { $1 }
+
+UpdateLine : computedField ',' str ',' sym ',' Expression { RUComputedField $3 $5 $7 }
+           | updatedField ',' str ',' sym ',' Expression { RUUpdatedField $3 $5 $7 }
+           | threshold ',' str ',' Comparison ',' sym ',' Expression { RUThreshold $3 $5 $7 $9 }
