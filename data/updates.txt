@@ -2,14 +2,15 @@ ComputedField,"All Energy",AvailableEnergy,FossilFuelEnergy+RenewableEnergy
 UpdatedField,"Food Spoilage",Food,Food*0.90
 UpdatedField,"Water Cycle",Water,Water*1.1
 UpdatedField,"Electronics Aging",Electronics,Electronics*0.99
-Threshold,"Pop Waste",(PopulationWaste/Population)>0.01,Population,Population-Population*((PopulationWaste/Population)-0.01)
-Threshold,"Farm Waste",(FarmWaste/Population)>0.001,Population,Population-Population*((FarmWaste/Population)-0.001)
-Threshold,"Electronics Waste",(ElectronicsWaste/Population)>0.1,Population,Population-Population*0.1*((ElectronicsWaste/Population)-0.1)
-Threshold,"Alloys Waste",(MetallicAlloysWaste/Population)>0.1,Population,Population-Population*0.1*((ElectronicsWaste/Population)-0.1)
-Threshold,"Fossil Fuel Waste",(FossilFuelWaste/Population)>0.1,Population,Population-Population*0.1*((FossilFuelWaste/Population)-0.1)
-Threshold,"Food Shortage",(Food/Population)<0.01,Population,Population-Population*(1.0/((Food/Population)-0.01))
-Threshold,"Water Shortage",(Water/Population)<0.01,Population,Population-Population*(1.0/((Water/Population)-0.01))
-Threshold,"Housing Shortage",(Housing/Population)<0.001,Population,Population-Population*(0.1/((Water/Population)-0.001))
+Threshold,"Pop Waste",(PopulationWaste/Population)>0.01,Population,Population-Population*((PopulationWaste/Population)- 0.01)
+Threshold,"Farm Waste",(FarmWaste/Population)>0.001,Population,Population-Population*((FarmWaste/Population)- 0.001)
+Threshold,"Electronics Waste",(ElectronicsWaste/Population)>0.1,Population,Population-Population*0.1*((ElectronicsWaste/Population)- 0.1)
+Threshold,"Alloys Waste",(MetallicAlloysWaste/Population)>0.1,Population,Population-Population*0.1*((MetallicAlloysWaste/Population)- 0.1)
+Threshold,"Fossil Fuel Waste",(FossilFuelWaste/Population)>0.1,Population,Population-Population*0.1*((FossilFuelWaste/Population)- 0.1)
+Threshold,"Food Shortage",(Food/Population)<0.01,Population,Population-Population*(1.0/((Food/Population)- 0.01))
+Threshold,"Water Shortage",(Water/Population)<0.01,Population,Population-Population*(1.0/((Water/Population)- 0.01))
+Threshold,"Housing Shortage",(Housing/Population)<0.001,Population,Population-Population*(0.1/((Water/Population)- 0.001))
+UpdatedField,"Population Growth",Population,Population*1.05
 #Field,Weight,Constant,Type,Param
 #Water,300.0,1.0,0.1,TargetedRatio,Population
 #MetallicElements,50.0,1.0,0.01,TargetedRatio,Population

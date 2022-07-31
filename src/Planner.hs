@@ -27,20 +27,20 @@ data PlannerConfig = PlannerConfig {
 -- specified bounding parameters, transforms, and scoring parameters
 computeSchedule :: CountryResources -> PlannerConfig -> [[ScheduleItem]]
 computeSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms _)  =
-  bestSchedules
+  trace ("computeSchedule, self is "++self) bestSchedules
   where
-    baseScore = computeScore (cm Map.! self) scoring
+    baseScore = trace "getting base score" computeScore (cm Map.! self) scoring
     -- Compute all the schedules
-    allSchedules = iterateSchedule cm pc baseScore initQueue scheduleQueue 0
+    allSchedules = trace "iterating schedule" iterateSchedule cm pc baseScore initQueue scheduleQueue 0
     -- Convert each PlanItem to a schedule
-    bestSchedules = map getPISchedule $ allQueueItems allSchedules
+    bestSchedules = trace "getting best schedule" map getPISchedule $ allQueueItems allSchedules
     getPISchedule (PlanItem _ _ _ _ s _) = s
     -- Create the frontier
     queue = createQueue frontierMaxSize
     -- Create a bounded priority queue to hold the resulting schedules
     scheduleQueue = createQueue numSchedules
     -- Get the initial set of possible moves
-    moves = getMoves pc baseScore (PlanItem 0 0.0 1.0 1.0 [] cm)
+    moves = trace "getting moves" getMoves pc baseScore (PlanItem 0 0.0 1.0 1.0 [] cm)
     -- Add the initial set of moves to the work queue (if we start with an empty
     -- work queue there would be nothing to do)
     initQueue = foldl' addItem queue moves
@@ -83,14 +83,14 @@ getMoves pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSch
   map (makePlanItem planCr pc baseScore currDepth currGamma currP currSched) allOperations
   where
     -- Create a set of transform operations for the self country
-    selfTransformOps = map (createTransformOp self 1) transforms
+    selfTransformOps = trace "getting selfTransformOps" map (createTransformOp self 1) transforms
     -- Find the 10 best multipliers for each transform, concatenate
     -- all the operations into a single list
-    transformOperations = concatMap (\x -> take 10 $ bestOperationQuantities planCr self scoring x) selfTransformOps
+    transformOperations = trace "getting transform operations" concatMap (\x -> take 10 $ bestOperationQuantities planCr self scoring x) selfTransformOps
     -- Find all the transfers from the self country to another
-    transferFromSelfOperations = mapMaybe (\c -> getTransfers planCr self self c scoring) otherCountries
+    transferFromSelfOperations = trace "transferFromSelfOperations" mapMaybe (\c -> getTransfers planCr self self c scoring) otherCountries
     -- Find all the transfers to the self country from another
-    transferToSelfOperations = mapMaybe (\c -> getTransfers planCr self c self scoring) otherCountries
+    transferToSelfOperations = trace "transferToSelfOperations" mapMaybe (\c -> getTransfers planCr self c self scoring) otherCountries
     -- Concatenate all the possible operations together
     allOperations = transformOperations ++ transferFromSelfOperations ++ transferToSelfOperations
     -- Converts a generated schedule item into a PlanItem with additional info
@@ -112,8 +112,8 @@ makePlanItem cr pc@(PlannerConfig self otherCountries depthBound frontierMaxSize
 
 acceptSchedule :: CountryResources -> PlannerConfig -> [ScheduleItem] -> Bool
 acceptSchedule cr (PlannerConfig self _ _ _ _ _ scoring _ _) schedule =
-  finalScore - initialScore >= 0
+  trace ("Checking whether to accept schedule, self is "++self) finalScore - initialScore >= 0
   where
-    initialScore = computeScore (cr Map.! self) scoring
+    initialScore = trace ("Computing score for "++self) computeScore (cr Map.! self) scoring
     finalScore = computeScore (applySchedule cr schedule Map.! self) scoring
   

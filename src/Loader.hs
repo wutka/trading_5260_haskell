@@ -17,6 +17,7 @@ import Resources
 import Parser
 import Lexer
 import qualified Data.Map as Map
+import Debug.Trace
 
 -- Loads an operation from a file
 loadOperation :: String -> IO Operation
@@ -88,5 +89,6 @@ noComments ('#':_) = False
 noComments _ = True
 
 parseUpdateLine :: String -> ResourceUpdate
-parseUpdateLine l = updateParser $ lexer l
+parseUpdateLine l =
+  updateParser $ lexer l
 

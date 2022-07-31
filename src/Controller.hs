@@ -4,6 +4,7 @@ import Planner
 import Resources
 import qualified Data.Map as Map
 import Data.List
+import Debug.Trace
 
 startGame :: CountryResources -> Int -> Int -> Int -> Double -> [Transform] -> [ResourceUpdate] -> [ScoreParameter] ->
   Int -> [CountryResources]
@@ -28,11 +29,11 @@ runGame cr pc roundsLeft acc =
 runRound :: CountryResources -> Map.Map String PlannerConfig -> [PlannerConfig] -> CountryResources
 runRound cr pcMap [] = cr
 runRound cr pcMap (self@(PlannerConfig country _ _ _ _ _ _ _ resourceUpdates):rest) =
-  runRound (maybe updatedCr (applySchedule updatedCr) acceptedSchedule) pcMap rest
+  trace "Running Round" runRound (maybe updatedCr (applySchedule updatedCr) acceptedSchedule) pcMap rest
   where    
-    updatedCr = Map.insert country (applyResourceUpdates (cr Map.! country) resourceUpdates) cr
-    acceptedSchedule = chooseSchedule cr pcMap schedules
-    schedules = computeSchedule cr self
+    updatedCr = trace "Updating cr" Map.insert country (applyResourceUpdates (cr Map.! country) resourceUpdates) cr
+    acceptedSchedule = trace ("Choosing schedule") chooseSchedule updatedCr pcMap schedules
+    schedules = trace "Computing schedules" computeSchedule updatedCr self
 
 chooseSchedule :: CountryResources -> Map.Map String PlannerConfig -> [[ScheduleItem]] -> Maybe [ScheduleItem]
 chooseSchedule cr pcMap [] = Nothing

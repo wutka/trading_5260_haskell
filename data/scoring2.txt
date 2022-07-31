@@ -7,7 +7,7 @@ Farm,350.0,1.0,0.1,TargetedRatio,Population
 Electronics,100.0,1.0,0.01,TargetedRatio,Population
 Housing,2000.0,1.0,0.1,TargetedRatio,Population
 Food,500.0,1.0,0.5,TargetedRatio,Population
-PotentialEnergyUsable,300.0,1.0,0.1,TargetedRatio,Population
+AvailableEnergy,300.0,1.0,0.1,TargetedRatio,Population
 AvailableLand,10.0,Ratio,Population
 PopulationWaste,-5.0,Ratio,Population
 FarmWaste,-25.0,Ratio,Population
@@ -15,4 +15,4 @@ MetallicAlloysWaste,-25.0,Ratio,Population
 ElectronicsWaste,-25.0,Ratio,Population
 HousingWaste,-25.0,Ratio,Population
 FoodWaste,-15.0,Ratio,Population
-PotentialEnergyWaste,-25.0,Ratio,Population
+FossilFuelWaste,-25.0,Ratio,Population
