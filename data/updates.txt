@@ -1,4 +1,4 @@
-ComputedField,"All Energy",AvailableEnergy,FossilFuelEnergy+RenewableEnergy
+UpdatedField,"All Energy",AvailableEnergy,FossilFuelEnergy+RenewableEnergy
 UpdatedField,"Food Spoilage",Food,Food*0.90
 UpdatedField,"Water Cycle",Water,Water*1.1
 UpdatedField,"Electronics Aging",Electronics,Electronics*0.99
