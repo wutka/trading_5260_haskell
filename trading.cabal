@@ -50,8 +50,9 @@ executable trading
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:
-        base ^>=4.14.3.0,
-        trading
+        base ^>=4.14.3.0
+      , containers
+      , trading
 
     hs-source-dirs:   app
     default-language: Haskell2010

@@ -16,6 +16,7 @@ data PlannerConfig = PlannerConfig {
   gamma :: Double,
   scoring :: [ScoreParameter],
   transforms :: [Transform],
+  autoTransforms :: [Transform],
   resourceUpdates :: [ResourceUpdate]}
                    deriving (Eq, Show)
 
@@ -26,21 +27,21 @@ data PlannerConfig = PlannerConfig {
 -- Compute a list of schedules for the given country with the
 -- specified bounding parameters, transforms, and scoring parameters
 computeSchedule :: CountryResources -> PlannerConfig -> [[ScheduleItem]]
-computeSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms _)  =
-  trace ("computeSchedule, self is "++self) bestSchedules
+computeSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _)  =
+  bestSchedules
   where
-    baseScore = trace "getting base score" computeScore (cm Map.! self) scoring
+    baseScore = computeScore (cm Map.! self) scoring
     -- Compute all the schedules
-    allSchedules = trace "iterating schedule" iterateSchedule cm pc baseScore initQueue scheduleQueue 0
+    allSchedules = iterateSchedule cm pc baseScore initQueue scheduleQueue 0
     -- Convert each PlanItem to a schedule
-    bestSchedules = trace "getting best schedule" map getPISchedule $ allQueueItems allSchedules
+    bestSchedules = map getPISchedule $ allQueueItems allSchedules
     getPISchedule (PlanItem _ _ _ _ s _) = s
     -- Create the frontier
     queue = createQueue frontierMaxSize
     -- Create a bounded priority queue to hold the resulting schedules
     scheduleQueue = createQueue numSchedules
     -- Get the initial set of possible moves
-    moves = trace "getting moves" getMoves pc baseScore (PlanItem 0 0.0 1.0 1.0 [] cm)
+    moves = getMoves pc baseScore (PlanItem 0 0.0 1.0 1.0 [] cm)
     -- Add the initial set of moves to the work queue (if we start with an empty
     -- work queue there would be nothing to do)
     initQueue = foldl' addItem queue moves
@@ -50,12 +51,13 @@ computeSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxS
 -- While this function is recursive, the recursive calls are
 -- all from the tail position so it is equivalent to iteration
 iterateSchedule :: CountryResources -> PlannerConfig -> Double -> PriorityQueue -> PriorityQueue -> Int -> PriorityQueue
-iterateSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms _) baseScore queue itemQueue iterations =
+iterateSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _) baseScore queue itemQueue iterations =
 --  trace ("Next item is "++show nextItem)
   (
 -- If the work queue is empty, we are done, show the number of iterations
   if isNothing nextItem then
-    trace ("Total iterations: "++show iterations) itemQueue
+--    trace ("Total iterations: "++show iterations)
+    itemQueue
 -- If the current item hits the depth bound, don't compute additional moves
 -- just use the currQueue (the one from which this item was removed)
   else if nextDepth >= depthBound then
@@ -77,20 +79,20 @@ iterateSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxS
 
 -- Computes the possible moves from a given position    
 getMoves :: PlannerConfig -> Double -> PlanItem -> [PlanItem]
-getMoves pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms _) baseScore  (PlanItem currDepth _ currGamma currP currSched planCr) =
+getMoves pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _) baseScore  (PlanItem currDepth _ currGamma currP currSched planCr) =
   -- For each possible schedule item, create a PlanItem containing
   -- the next depth, the score, the schedule, and a snapshot of the resources
   map (makePlanItem planCr pc baseScore currDepth currGamma currP currSched) allOperations
   where
     -- Create a set of transform operations for the self country
-    selfTransformOps = trace "getting selfTransformOps" map (createTransformOp self 1) transforms
+    selfTransformOps = map (createTransformOp self 1) transforms
     -- Find the 10 best multipliers for each transform, concatenate
     -- all the operations into a single list
-    transformOperations = trace "getting transform operations" concatMap (\x -> take 10 $ bestOperationQuantities planCr self scoring x) selfTransformOps
+    transformOperations = concatMap (\x -> take 1 $ bestOperationQuantities planCr self scoring x) selfTransformOps
     -- Find all the transfers from the self country to another
-    transferFromSelfOperations = trace "transferFromSelfOperations" mapMaybe (\c -> getTransfers planCr self self c scoring) otherCountries
+    transferFromSelfOperations = mapMaybe (\c -> getTransfers planCr self self c scoring) otherCountries
     -- Find all the transfers to the self country from another
-    transferToSelfOperations = trace "transferToSelfOperations" mapMaybe (\c -> getTransfers planCr self c self scoring) otherCountries
+    transferToSelfOperations = mapMaybe (\c -> getTransfers planCr self c self scoring) otherCountries
     -- Concatenate all the possible operations together
     allOperations = transformOperations ++ transferFromSelfOperations ++ transferToSelfOperations
     -- Converts a generated schedule item into a PlanItem with additional info
@@ -100,7 +102,7 @@ getMoves pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSch
 -- utility for the schedule item using the original score, the discounted
 -- reward, and the schedule probability
 makePlanItem :: CountryResources -> PlannerConfig -> Double -> Int -> Double -> Double -> [ScheduleItem] -> ScheduleItem -> PlanItem
-makePlanItem cr pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms _) baseScore currDepth currGamma currP currSched (ScheduleItem op score) =
+makePlanItem cr pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _) baseScore currDepth currGamma currP currSched (ScheduleItem op score) =
   PlanItem (currDepth+1) ((score-baseScore)*currGamma*gamma) (currGamma*gamma) newP (currSched ++ [ScheduleItem op eu]) (applyOp cr op 1)
   where
     dr = (score-baseScore)*currGamma*gamma
@@ -111,9 +113,9 @@ makePlanItem cr pc@(PlannerConfig self otherCountries depthBound frontierMaxSize
     eu = (newP * dr) + (1.0 - newP) * (-10.0)
 
 acceptSchedule :: CountryResources -> PlannerConfig -> [ScheduleItem] -> Bool
-acceptSchedule cr (PlannerConfig self _ _ _ _ _ scoring _ _) schedule =
-  trace ("Checking whether to accept schedule, self is "++self) finalScore - initialScore >= 0
+acceptSchedule cr (PlannerConfig self _ _ _ _ _ scoring _ _ _) schedule =
+  finalScore - initialScore >= 0
   where
-    initialScore = trace ("Computing score for "++self) computeScore (cr Map.! self) scoring
+    initialScore = computeScore (cr Map.! self) scoring
     finalScore = computeScore (applySchedule cr schedule Map.! self) scoring
   

@@ -54,6 +54,8 @@ data ResourceUpdate =
   | RUThreshold String ResourceComparison String ResourceExpression
   deriving (Eq,Show)
 
+data UpdatedResource = UpdatedResource String Int
+
 -- An item in a schedule has an operation and an expected utility
 data ScheduleItem =
   ScheduleItem Operation Double
@@ -218,7 +220,7 @@ greatestResMultiplier :: ResourceMap -> Int -> ResourceAmount -> Int
 greatestResMultiplier rm currMax (ResourceAmount name amt) =
   -- Whichever multipler is the smallest, we use it because it
   -- is the limiting factor
-  trace ("greatestResMultiplier for "++name++" in "++show rm) min currMax bestMultiplier
+  min currMax bestMultiplier
   where
     resourceValue = rm Map.! name
     -- The most we can multiply an op amount by is
@@ -229,7 +231,7 @@ greatestResMultiplier rm currMax (ResourceAmount name amt) =
 greatestMultiplier :: CountryResources -> Operation -> Int
 greatestMultiplier cr (OpTransform (Transform source inputs _)) =
   -- Find the minimum multiplier across all the resources in the op
-  trace "greatestMultiplier" foldl' (greatestResMultiplier rm) maxBound inputs
+  foldl' (greatestResMultiplier rm) maxBound inputs
   where
     rm = cr Map.! source
     
@@ -274,7 +276,7 @@ applyScore rm currScore sc@(TargetedRatioScore field baseValue weight target pro
 getTargetedDiff :: ResourceMap -> ScoreParameter -> Int
 getTargetedDiff rm (RatioScore _ _ _) = error "can't getTargetedDiff on RatioScore"
 getTargetedDiff rm (TargetedRatioScore field baseValue weight target proportionField) =
-  trace ("Getting targeted diff for "++proportionField++" and "++field) actualVal - targetValue
+  actualVal - targetValue
   where
     denom = fromIntegral $ rm Map.! proportionField
     targetValue = floor (target * denom)
@@ -291,17 +293,17 @@ allScores cr scoreParams =
 -- by applying the operation to the resource map
 makeScorePair :: CountryResources -> String -> Operation -> [ScoreParameter] -> Int -> (Operation, Double)
 makeScorePair cr self op scoreParams multiplier =
-  trace "making score pair" (multipliedOp, score)
+  (multipliedOp, score)
   where
     multipliedOp = multiplyOp op multiplier
     appliedCR = applyOp cr op multiplier
-    score = trace ("computing score for "++self++" from "++show appliedCR) computeScore (appliedCR Map.! self) scoreParams
+    score = computeScore (appliedCR Map.! self) scoreParams
 
 -- Return a list of the best quantities for an operation, sorted from best score
 -- to worst
 bestOperationQuantities :: CountryResources -> String -> [ScoreParameter] -> Operation -> [ScheduleItem]
 bestOperationQuantities cr self scoring op =
-  trace "bestOperationQuantities" map makeScheduleItem $ sortBy compareScores quantities
+  map makeScheduleItem $ sortBy compareScores quantities
   where                     
     compareScores (_,s1) (_,s2) = compare s1 s2
     quantities = map (makeScorePair cr self op scoring) [1..(greatestMultiplier cr op)]
@@ -395,7 +397,7 @@ computeCountryP oldCr newCr self country scoring (OpTransfer (Transfer from to _
   
 
 evaluateResourceExpression :: ResourceMap -> ResourceExpression -> Double
-evaluateResourceExpression rm (REFieldRef field) = trace ("Loading field "++field) fromIntegral $ rm Map.! field
+evaluateResourceExpression rm (REFieldRef field) = fromIntegral $ rm Map.! field
 evaluateResourceExpression _ (REConstant v) = v
 evaluateResourceExpression rm (REAdd l r) = evalExprOp rm (+) l r
 evaluateResourceExpression rm (RESubtract l r) = evalExprOp rm (-) l r
@@ -433,39 +435,36 @@ evalCompOp rm op l r = op lval rval
     lval = evaluateResourceComparison rm l
     rval = evaluateResourceComparison rm r
 
-applyResourceUpdate :: ResourceMap -> ResourceUpdate -> ResourceMap
-applyResourceUpdate rm (RUComputedField desc field expr) =
-  trace ("computedField "++desc) (
+applyResourceUpdate :: (ResourceMap,[UpdatedResource]) -> ResourceUpdate -> (ResourceMap, [UpdatedResource])
+applyResourceUpdate (rm,updates) (RUComputedField desc field expr) =
   if val >= 0 then
-    Map.insert field val rm
+    (Map.insert field val rm, UpdatedResource field val : updates)
   else
-    Map.insert field 0 rm
-  )
+    (Map.insert field 0 rm, UpdatedResource field val : updates)
   where
     val = floor (evaluateResourceExpression rm expr)    
-applyResourceUpdate rm (RUUpdatedField desc field expr) =
-  trace ("updatedField "++desc) (
+applyResourceUpdate (rm,updates) (RUUpdatedField desc field expr) =
   if val >= 0 then
-    Map.insert field val rm
+    (Map.insert field val rm, UpdatedResource field val : updates)
   else
-    Map.insert field 0 rm
-  )
+    (Map.insert field 0 rm, UpdatedResource field val : updates)
   where
     val = floor $ evaluateResourceExpression rm expr
-applyResourceUpdate rm (RUThreshold desc threshold field expr) =
-  trace ("threshold "++desc) (
+applyResourceUpdate (rm,updates) (RUThreshold desc threshold field expr) =
   if evaluateResourceComparison rm threshold then
     if val >= 0 then
-      Map.insert field val rm
+      (Map.insert field val rm, UpdatedResource field val : updates)
     else
-      Map.insert field 0 rm
+      (Map.insert field 0 rm, UpdatedResource field val : updates)
   else
-    rm
-  )
+    (rm, updates)
   where
     val = floor (evaluateResourceExpression rm expr)
       
 
-applyResourceUpdates :: ResourceMap -> [ResourceUpdate] -> ResourceMap
-applyResourceUpdates = foldl' applyResourceUpdate
+applyResourceUpdates :: ResourceMap -> [ResourceUpdate] -> (ResourceMap, [UpdatedResource])
+applyResourceUpdates rm updateList =
+  (rm, reverse updates)
+  where
+    (newRM, updates) = foldl' applyResourceUpdate (rm,[]) updateList
     
