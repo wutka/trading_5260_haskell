@@ -1,6 +1,6 @@
-Country,AvailableLand,Water,WasteWater,Population,PopulationWaste,BuildingWaste,MetallicElements,Timber,Farm,FarmWaste,MetallicAlloys,MetallicAlloysWaste,Electronics,ElectronicsWaste,Housing,HousingWaste,Food,FoodWaste,AvailableEnergy,FossilFuelEnergy,FossilFuelWaste,RenewableEnergy,WaterTreatment,ElectronicsRecycling,FoodRecycling,WasteRecycling,Landfill,FossilEnergyProduction,RenewableEnergyProduction,FossilWasteDisposal
-Sweden,5000,1000,0,1000,0,0,100,100,10,0,100,0,0,0,10,0,100,0,500,200,0,300,0,0,0,10,0,10,10,0
-Norway,3000,200,0,2000,0,0,200,500,20,0,300,0,0,0,20,0,200,0,600,400,0,200,0,0,0,10,0,20,20,0
-Finland,4000,400,0,3000,0,0,300,400,30,0,500,0,0,0,30,0,300,0,650,500,0,150,0,0,0,10,0,30,30,0
-Denmark,2000,500,0,500,0,0,400,300,40,0,700,0,0,0,50,0,500,0,1250,1000,0,250,0,0,0,10,0,40,40,0
-Iceland,1000,100,0,1750,0,0,500,200,50,0,900,0,0,0,15,0,175,0,800,750,0,50,0,0,0,10,0,50,50,0
+Country,_AvailableLand,Water,WasteWater,_Population,PopulationWaste,BuildingWaste,MetallicElements,Timber,_Forest,_Farm,FarmWaste,MetallicAlloys,MetallicAlloysWaste,Electronics,ElectronicsWaste,_Housing,HousingWaste,Food,FoodWaste,AvailableEnergy,FossilFuelWaste,_WaterTreatment,_ElectronicsRecycling,_FoodRecycling,_WasteRecycling,_Landfill,_FossilEnergyProduction,_RenewableEnergyProduction,_FossilWasteDisposal
+Sweden,5000,1000,0,1000,0,0,100,100,2,10,0,100,0,0,0,10,0,100,0,500,0,0,0,0,10,0,10,10,0
+Norway,3000,200,0,2000,0,0,200,500,5,20,0,300,0,0,0,20,0,200,0,600,0,0,0,0,10,0,20,20,0
+Finland,4000,400,0,3000,0,0,300,400,4,30,0,500,0,0,0,30,0,300,0,650,0,0,0,0,10,0,30,30,0
+Denmark,2000,500,0,500,0,0,400,300,3,40,0,700,0,0,0,50,0,500,0,1250,0,0,0,0,10,0,40,40,0
+Iceland,1000,100,0,1750,0,0,500,200,2,50,0,900,0,0,0,15,0,175,0,800,0,0,0,0,10,0,50,50,0

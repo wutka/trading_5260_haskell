@@ -17,6 +17,7 @@ import Resources
 import Parser
 import Lexer
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Debug.Trace
 
 -- Loads an operation from a file
@@ -49,17 +50,21 @@ loadCSV filename = do
     parseLine l = csvLineParser $ lexer l
 
 -- Parses a CSV file as a map of country resrouces
-loadCountryResources :: String -> IO CountryResources
+loadCountryResources :: String -> IO (CountryResources, Set.Set String)
 loadCountryResources filename = do
   csvInfo <- loadCSV filename
   -- Get the field names from the first line, removing the first field (country name)
   let fields = map getCsvString $ tail $ head csvInfo
   -- Create a map from the remaining lines
-  return $ Map.fromList $ map (makeResourceList fields) $ tail csvInfo
+  return $ (Map.fromList $ map (makeResourceList (map stripUnderscore fields)) $ tail csvInfo, nonTransferFields fields)
   where
     -- Create a resource map from a CSV line
     makeResourceList fields countryNumbers =
       (getCsvString (head countryNumbers) , Map.fromList (zip fields (map getCsvInt (tail countryNumbers))))
+    stripUnderscore s = if head s == '_' then tail s else s
+    hasUnderscore s = head s == '_'
+    nonTransferFields fields = Set.fromList $ map stripUnderscore $ filter hasUnderscore fields
+    
 
 -- Loads a scoring formula from a CSV file
 loadScoringFormula :: String -> IO [ScoreParameter]

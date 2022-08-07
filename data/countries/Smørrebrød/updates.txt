@@ -1,0 +1,19 @@
+UpdatedField,"Food Spoilage",Food,Food*0.90
+UpdatedField,"People Eat",Food,Food-Population*0.20
+UpdatedField,"People Consume Energy",AvailableEnergy,AvailableEnergy-Population*0.2
+UpdatedField,"People Use Timber",Timber,Timber-Population*0.01
+UpdatedField,"People Buy Electronics",Timber,Timber-Population*0.01
+UpdatedField,"Water Cycle",Water,Water*1.02
+UpdatedField,"Electronics Aging",Electronics,Electronics*0.99
+UpdatedField,"Population Waste",PopulationWaste,PopulationWaste+0.001*Population
+UpdatedField,"Farms Produce Food",Food,Food+Farm*30
+UpdatedField,"Forests Produce Timber",Timber,Timber+Forest*10
+Threshold,"Pop Waste",(PopulationWaste/Population)>0.01,Population,Population-Population*0.01*((PopulationWaste/Population)- 0.01)
+Threshold,"Farm Waste",(FarmWaste/Population)>0.001,Population,Population-Population*0.001*((FarmWaste/Population)- 0.001)
+Threshold,"Electronics Waste",(ElectronicsWaste/Population)>0.001,Population,Population-Population*0.001*((ElectronicsWaste/Population)- 0.001)
+Threshold,"Alloys Waste",(MetallicAlloysWaste/Population)>0.001,Population,Population-Population*0.001*((MetallicAlloysWaste/Population)- 0.001)
+Threshold,"Fossil Fuel Waste",(FossilFuelWaste/Population)>0.001,Population,Population-Population*0.001*((FossilFuelWaste/Population)- 0.001)
+Threshold,"Food Shortage",(Food/Population)<0.01,Population,Population-Population*0.01*((Food/Population)- 0.01)
+Threshold,"Water Shortage",(Water/Population)<0.01,Population,Population-Population*0.01*((Water/Population)- 0.01)
+Threshold,"Housing Shortage",(Housing/Population)<0.001,Population,Population-Population*0.001*((Water/Population)- 0.001)
+UpdatedField,"Population Growth",Population,Population*1.05

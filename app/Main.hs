@@ -102,12 +102,12 @@ main = do
   let gamma = if length argv > 9 then read (argv !! 9) else 1.0
 
   -- Load the country resources
-  countries <- loadCountryResources resourcesFile
+  (countries,nontransfer) <- loadCountryResources resourcesFile
   plannerConfigs <- mapM (loadPlannerConfig countries) (Map.keys countries)
   let plannerConfigMap = Map.fromList (map plannerCountryPair plannerConfigs)  
   
   -- Compute the schedules
-  let turnResults = startGame countries plannerConfigs turns
+  let turnResults = startGame countries nontransfer plannerConfigs turns
   mapM_ (printRound plannerConfigMap (Map.keys countries)) $ zip [1..] turnResults
   -- Print the schedules
 --  putStrLn $ "[" ++ unlines (map show schedule) ++ "]"

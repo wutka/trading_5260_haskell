@@ -1,0 +1,6 @@
+Country,_AvailableLand,Water,WasteWater,_Population,PopulationWaste,BuildingWaste,MetallicElements,Timber,_Forest,_Farm,FarmWaste,MetallicAlloys,MetallicAlloysWaste,Electronics,ElectronicsWaste,_Housing,HousingWaste,Food,FoodWaste,AvailableEnergy,FossilFuelWaste,_WaterTreatment,_ElectronicsRecycling,_FoodRecycling,_WasteRecycling,_Landfill,_FossilEnergyProduction,_RenewableEnergyProduction,_FossilWasteDisposal
+Markland,5000,1000,0,500,0,0,20,1000,200,10,0,20,0,0,0,10,0,100,0,500,0,0,0,0,10,0,10,10,0
+Solinn,6000,500,0,1000,0,0,500,100,5,20,0,300,0,0,0,20,0,200,0,600,0,0,0,0,10,0,0,2000,0
+Smørrebrød,4000,1000,0,3000,0,0,300,400,10,300,0,500,0,0,0,30,0,300,0,650,0,0,0,0,10,0,30,30,0
+Rafverkia,2000,500,0,500,0,0,5000,300,3,40,0,700,0,0,0,50,0,500,0,1250,0,0,0,0,10,0,20,80,0
+Endurvinna,1000,1000,0,500,0,0,500,200,2,50,0,900,0,0,0,15,0,175,0,800,0,100,200,200,400,0,50,50,300

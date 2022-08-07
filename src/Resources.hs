@@ -1,6 +1,7 @@
 module Resources where
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.List ( foldl', intersect, sortBy )
 import Debug.Trace
 
@@ -344,8 +345,8 @@ getShortfallResources cr country scoring =
     rm = cr Map.! country
 
 -- Returns the transfers that should be performed between two countries
-getTransfers :: CountryResources -> String -> String -> String -> [ScoreParameter] -> Maybe ScheduleItem
-getTransfers cr self fromCountry toCountry scoring =
+getTransfers :: CountryResources -> Set.Set String -> String -> String -> String -> [ScoreParameter] -> Maybe ScheduleItem
+getTransfers cr nontransfers self fromCountry toCountry scoring =
   if null transfers then
     -- If there are no transfers, return Nothing
     Nothing
@@ -354,9 +355,10 @@ getTransfers cr self fromCountry toCountry scoring =
     Just $ ScheduleItem (makeTransferItem transfers) score
   where
     -- Get the resources that are above the targeted ratio in the from country
-    excessResources = getExcessResources cr fromCountry scoring
+    excessResources = filter transferable $ getExcessResources cr fromCountry scoring
     -- Get the resources that are below the targeted ratio in the to country
-    shortfallResources = getShortfallResources cr toCountry scoring
+    shortfallResources = filter transferable $ getShortfallResources cr toCountry scoring
+    transferable (s,_) = Set.notMember s nontransfers
     -- Merge the excess and shortfall resources, using the minimum value
     -- for each one
     allResourceMap = Map.unionWith min (Map.fromList excessResources) (Map.fromList shortfallResources)

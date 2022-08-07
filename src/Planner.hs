@@ -6,6 +6,7 @@ import Data.Maybe
 import Data.List
 import Debug.Trace
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 data PlannerConfig = PlannerConfig {
   country :: String,
@@ -26,13 +27,13 @@ data PlannerConfig = PlannerConfig {
 
 -- Compute a list of schedules for the given country with the
 -- specified bounding parameters, transforms, and scoring parameters
-computeSchedule :: CountryResources -> PlannerConfig -> [[ScheduleItem]]
-computeSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _)  =
+computeSchedule :: CountryResources -> Set.Set String -> PlannerConfig -> [[ScheduleItem]]
+computeSchedule cm nontransfer pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _)  =
   bestSchedules
   where
     (baseScore,_) = computeScore (cm Map.! self) scoring
     -- Compute all the schedules
-    allSchedules = iterateSchedule cm pc baseScore initQueue scheduleQueue 0
+    allSchedules = iterateSchedule cm nontransfer pc baseScore initQueue scheduleQueue 0
     -- Convert each PlanItem to a schedule
     bestSchedules = map getPISchedule $ allQueueItems allSchedules
     getPISchedule (PlanItem _ _ _ _ s _) = s
@@ -41,7 +42,7 @@ computeSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxS
     -- Create a bounded priority queue to hold the resulting schedules
     scheduleQueue = createQueue numSchedules
     -- Get the initial set of possible moves
-    moves = getMoves pc baseScore (PlanItem 0 0.0 1.0 1.0 [] cm)
+    moves = getMoves nontransfer pc baseScore (PlanItem 0 0.0 1.0 1.0 [] cm)
     -- Add the initial set of moves to the work queue (if we start with an empty
     -- work queue there would be nothing to do)
     initQueue = foldl' addItem queue moves
@@ -50,8 +51,8 @@ computeSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxS
 -- exceeded the depth bounds, finds any moves to make from it
 -- While this function is recursive, the recursive calls are
 -- all from the tail position so it is equivalent to iteration
-iterateSchedule :: CountryResources -> PlannerConfig -> Double -> PriorityQueue -> PriorityQueue -> Int -> PriorityQueue
-iterateSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _) baseScore queue itemQueue iterations =
+iterateSchedule :: CountryResources -> Set.Set String -> PlannerConfig -> Double -> PriorityQueue -> PriorityQueue -> Int -> PriorityQueue
+iterateSchedule cm nontransfer pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _) baseScore queue itemQueue iterations =
 --  trace ("Next item is "++show nextItem)
   (
 -- If the work queue is empty, we are done, show the number of iterations
@@ -61,11 +62,11 @@ iterateSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxS
 -- If the current item hits the depth bound, don't compute additional moves
 -- just use the currQueue (the one from which this item was removed)
   else if nextDepth >= depthBound then
-    iterateSchedule cm pc baseScore currQueue (addItem itemQueue (fromJust nextItem)) (iterations+1)
+    iterateSchedule cm nontransfer pc baseScore currQueue (addItem itemQueue (fromJust nextItem)) (iterations+1)
 -- Otherwise compute the next moves (by referencing nextQueue instead of currQueue
 -- in the recursive call)  
   else
-    iterateSchedule cm pc baseScore nextQueue (addItem itemQueue (fromJust nextItem)) (iterations+1)
+    iterateSchedule cm nontransfer pc baseScore nextQueue (addItem itemQueue (fromJust nextItem)) (iterations+1)
   )
   where
     -- Get the next item and updated queue
@@ -73,13 +74,13 @@ iterateSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxS
     -- Extract the item from the Maybe structure
     (PlanItem nextDepth nextPriority nextGamma nextP nextSchedule _) = fromJust nextItem
     -- Compute the possible next moves from the current item
-    moves = getMoves pc baseScore (fromJust nextItem)
+    moves = getMoves nontransfer pc baseScore (fromJust nextItem)
     -- Add all the newly generated moves to the frontier (queue)
     nextQueue = foldl' addItem currQueue moves
 
 -- Computes the possible moves from a given position    
-getMoves :: PlannerConfig -> Double -> PlanItem -> [PlanItem]
-getMoves pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _) baseScore  (PlanItem currDepth _ currGamma currP currSched planCr) =
+getMoves :: Set.Set String -> PlannerConfig -> Double -> PlanItem -> [PlanItem]
+getMoves nontransfer pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _) baseScore  (PlanItem currDepth _ currGamma currP currSched planCr) =
   -- For each possible schedule item, create a PlanItem containing
   -- the next depth, the score, the schedule, and a snapshot of the resources
   map (makePlanItem planCr pc baseScore currDepth currGamma currP currSched) allOperations
@@ -90,9 +91,9 @@ getMoves pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSch
     -- all the operations into a single list
     transformOperations = concatMap (\x -> take 1 $ bestOperationQuantities planCr self scoring x) selfTransformOps
     -- Find all the transfers from the self country to another
-    transferFromSelfOperations = mapMaybe (\c -> getTransfers planCr self self c scoring) otherCountries
+    transferFromSelfOperations = mapMaybe (\c -> getTransfers planCr nontransfer self self c scoring) otherCountries
     -- Find all the transfers to the self country from another
-    transferToSelfOperations = mapMaybe (\c -> getTransfers planCr self c self scoring) otherCountries
+    transferToSelfOperations = mapMaybe (\c -> getTransfers planCr nontransfer self c self scoring) otherCountries
     -- Concatenate all the possible operations together
     allOperations = transformOperations ++ transferFromSelfOperations ++ transferToSelfOperations
     -- Converts a generated schedule item into a PlanItem with additional info

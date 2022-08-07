@@ -1,0 +1,6 @@
+#!/bin/sh
+set -x
+cp $* Finland
+cp $* Iceland
+cp $* Norway
+cp $* Sweden

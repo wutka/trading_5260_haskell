@@ -20,7 +20,7 @@ main = do
   let numSchedules = if length argv > 2 then read (argv !! 2) else 10
   transforms <- loadTransforms "data/transforms"
   scoring <- loadScoringFormula "data/scoring2.txt"
-  countries <- loadCountryResources "data/resources.csv"
+  (countries,_) <- loadCountryResources "data/resources.csv"
   let keys = Map.keys countries
   let excesses = map (getExcess countries scoring) keys
   let shortfalls = map (getShortfall countries scoring) keys

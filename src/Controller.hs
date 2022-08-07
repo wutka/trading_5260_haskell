@@ -3,47 +3,48 @@ module Controller where
 import Planner
 import Resources
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.List
 import Debug.Trace
 
 data RoundResult = RoundResult String Double CountryResources [ScoreDetail] [UpdatedResource] [Operation] (Maybe [ScheduleItem])
 
-startGame :: CountryResources -> [PlannerConfig] -> Int -> [Map.Map String RoundResult]
-startGame cr plannerConfigs numTurns =
-  runGame cr plannerConfigs numTurns []
+startGame :: CountryResources -> Set.Set String -> [PlannerConfig] -> Int -> [Map.Map String RoundResult]
+startGame cr nontransfer plannerConfigs numTurns =
+  runGame cr nontransfer plannerConfigs numTurns []
   where
     countries = Map.keys cr
 
-runGame :: CountryResources -> [PlannerConfig] -> Int -> [Map.Map String RoundResult] -> [Map.Map String RoundResult]
-runGame cr pc roundsLeft acc =
+runGame :: CountryResources -> Set.Set String -> [PlannerConfig] -> Int -> [Map.Map String RoundResult] -> [Map.Map String RoundResult]
+runGame cr nontransfer pc roundsLeft acc =
   if roundsLeft == 0 then
     reverse acc
   else if roundsLeft < 0 then
     if noSchedules then
       reverse acc
     else
-      runGame newCountryResources pc roundsLeft (roundMap:acc)
+      runGame newCountryResources nontransfer pc roundsLeft (roundMap:acc)
   else
-    runGame newCountryResources pc (roundsLeft-1) (roundMap:acc)
+    runGame newCountryResources nontransfer pc (roundsLeft-1) (roundMap:acc)
   where
-    (newCountryResources, roundMap) = runRound cr plannerMap pc Map.empty
+    (newCountryResources, roundMap) = runRound cr nontransfer plannerMap pc Map.empty
     plannerMap = Map.fromList $ map makeKVPair pc
     makeKVPair pc@(PlannerConfig country _ _ _ _ _ _ _ _ _) = (country,pc)
     noSchedules = all noSchedule $ Map.elems roundMap
     noSchedule (RoundResult _ _ _ _ _ _ Nothing) = True
     noSchedule (RoundResult _ _ _ _ _ _ (Just _)) = False
     
-runRound :: CountryResources -> Map.Map String PlannerConfig -> [PlannerConfig] -> Map.Map String RoundResult -> (CountryResources, Map.Map String RoundResult)
-runRound cr pcMap [] roundMap = (cr, roundMap)
-runRound cr pcMap (self@(PlannerConfig country _ _ _ _ _ scoring _ autoTransforms resourceUpdates):rest) roundMap =
+runRound :: CountryResources -> Set.Set String -> Map.Map String PlannerConfig -> [PlannerConfig] -> Map.Map String RoundResult -> (CountryResources, Map.Map String RoundResult)
+runRound cr nontransfer pcMap [] roundMap = (cr, roundMap)
+runRound cr nontransfer pcMap (self@(PlannerConfig country _ _ _ _ _ scoring _ autoTransforms resourceUpdates):rest) roundMap =
 --  trace ("\nOriginal RM for "++country++": "++show (cr Map.! country)++"\nAfter Updates "++country++": "++show (updatedCr Map.! country)++"\nAfter auto "++country++": "++show (autoCr Map.! country)++"\n")
-  runRound resultCr pcMap rest updatedRoundMap
+  runRound resultCr nontransfer pcMap rest updatedRoundMap
   where
     (updatedRm, updates) = applyResourceUpdates (cr Map.! country) resourceUpdates
     updatedCr = Map.insert country updatedRm cr
     (autoCr,autoTransformed) = computeAutoTransforms updatedCr self
     acceptedSchedule = chooseSchedule autoCr pcMap schedules
-    schedules = computeSchedule autoCr self
+    schedules = computeSchedule autoCr nontransfer self
     resultCr = maybe autoCr (applySchedule autoCr) acceptedSchedule
     (score,details) = computeScore (resultCr Map.! country) scoring
     updatedRoundMap = Map.insert country (RoundResult country score resultCr details updates (reverse autoTransformed) acceptedSchedule) roundMap
