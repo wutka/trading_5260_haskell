@@ -36,7 +36,7 @@ runGame cr pc roundsLeft acc =
 runRound :: CountryResources -> Map.Map String PlannerConfig -> [PlannerConfig] -> Map.Map String RoundResult -> (CountryResources, Map.Map String RoundResult)
 runRound cr pcMap [] roundMap = (cr, roundMap)
 runRound cr pcMap (self@(PlannerConfig country _ _ _ _ _ scoring _ autoTransforms resourceUpdates):rest) roundMap =
-  trace ("\nOriginal RM for "++country++": "++show (cr Map.! country)++"\nAfter Updates "++country++": "++show (updatedCr Map.! country)++"\nAfter auto "++country++": "++show (autoCr Map.! country)++"\n")
+--  trace ("\nOriginal RM for "++country++": "++show (cr Map.! country)++"\nAfter Updates "++country++": "++show (updatedCr Map.! country)++"\nAfter auto "++country++": "++show (autoCr Map.! country)++"\n")
   runRound resultCr pcMap rest updatedRoundMap
   where
     (updatedRm, updates) = applyResourceUpdates (cr Map.! country) resourceUpdates
