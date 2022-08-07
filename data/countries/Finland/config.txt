@@ -1,0 +1,4 @@
+maxDepth=4
+frontierSize=200
+numSchedules=1
+gamma=1.0

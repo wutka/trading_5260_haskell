@@ -92,3 +92,7 @@ parseUpdateLine :: String -> ResourceUpdate
 parseUpdateLine l =
   updateParser $ lexer l
 
+loadConfigFile :: String -> IO [(String,CsvItem)]
+loadConfigFile filename = do
+  contents <- readFile filename
+  return $ map (configLineParser . lexer) $ filter noComments $ lines contents

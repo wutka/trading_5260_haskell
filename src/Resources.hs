@@ -49,12 +49,11 @@ data ResourceComparison =
   deriving (Eq,Show)
 
 data ResourceUpdate =
-    RUComputedField String String ResourceExpression
-  | RUUpdatedField String String ResourceExpression
+    RUUpdatedField String String ResourceExpression
   | RUThreshold String ResourceComparison String ResourceExpression
   deriving (Eq,Show)
 
-data UpdatedResource = UpdatedResource String Int
+data UpdatedResource = UpdatedResource String String Int
 
 -- An item in a schedule has an operation and an expected utility
 data ScheduleItem =
@@ -79,6 +78,9 @@ data ScoreParameter =
   | TargetedRatioScore String Double Double Double String
   deriving (Eq, Show)
 
+data ScoreDetail =
+  ScoreDetail String String Double
+  
 -- The next step in planning (this is what is stored in the frontier)
 data PlanItem = PlanItem Int Double Double Double [ScheduleItem] CountryResources
   deriving (Show)
@@ -242,28 +244,30 @@ greatestMultiplier cr (OpTransfer (Transfer from _ resources)) =
     rm = cr Map.! from
 
 -- Computes a score for a resource map
-computeScore :: ResourceMap -> [ScoreParameter] -> Double
+computeScore :: ResourceMap -> [ScoreParameter] -> (Double, [ScoreDetail])
 -- Since the list of scoring parameters is the last parameter for
 -- both this function and the foldl' function, we can omit
 -- it from the parameter declaration here and the call to foldl'
-computeScore rm =
+computeScore rm scoring =
+  (score, reverse detail)
+  where
   -- Add up the score by applying each scoring parameter
-  foldl' (applyScore rm) 0.0
-
+    (score, detail) = foldl' (applyScore rm) (0.0,[]) scoring
+  
 -- Adds the value from a scoring parameter to the current score
-applyScore :: ResourceMap -> Double -> ScoreParameter -> Double
+applyScore :: ResourceMap -> (Double,[ScoreDetail]) -> ScoreParameter -> (Double,[ScoreDetail])
 
 -- Applies a score for a ratio
-applyScore rm currScore (RatioScore field weight proportionField) =
+applyScore rm (currScore,currDetails) (RatioScore field weight proportionField) =
 --  trace ("RatioScore for "++field++": "++show score++"  weight: "++show weight)
-  currScore + score
+  (currScore + score, ScoreDetail "Ratio" field score:currDetails)
   where
     score = (fromIntegral $ rm Map.! field) * weight /
             (fromIntegral $ rm Map.! proportionField)
 -- Applies a score for a targeted ratio
-applyScore rm currScore sc@(TargetedRatioScore field baseValue weight target proportionField) =
+applyScore rm (currScore,currDetails) sc@(TargetedRatioScore field baseValue weight target proportionField) =
 --  trace ("TargetedRatioScore for "++field++": "++show score)
-  currScore + score
+  (currScore + score, ScoreDetail "TargetedRatio" field score:currDetails)
   where
     -- Dist is how far the current is from the idea, subtract weight*dist from the base score
     -- value. If the dist is 0, the score is the base score value.
@@ -287,7 +291,7 @@ allScores :: CountryResources -> [ScoreParameter] -> Map.Map String Double
 allScores cr scoreParams =
   Map.map getScore cr
   where
-    getScore rm = computeScore rm scoreParams
+    getScore rm = fst $ computeScore rm scoreParams
 
 -- Returns a pair of an operation and the score the operation for the self country
 -- by applying the operation to the resource map
@@ -297,7 +301,7 @@ makeScorePair cr self op scoreParams multiplier =
   where
     multipliedOp = multiplyOp op multiplier
     appliedCR = applyOp cr op multiplier
-    score = computeScore (appliedCR Map.! self) scoreParams
+    (score,_) = computeScore (appliedCR Map.! self) scoreParams
 
 -- Return a list of the best quantities for an operation, sorted from best score
 -- to worst
@@ -367,7 +371,7 @@ getTransfers cr self fromCountry toCountry scoring =
       OpTransfer (Transfer fromCountry toCountry transfers)
     rm = cr Map.! self
     -- Compute the score for the self country for this transfer
-    score = computeScore rm scoring
+    (score,_) = computeScore rm scoring
     
 -- Compute P for op
 computeP :: CountryResources -> String -> [ScoreParameter] -> Operation -> Double
@@ -390,8 +394,8 @@ computeCountryP oldCr newCr self country scoring (OpTransfer (Transfer from to _
   where
     countryOldRm = oldCr Map.! country
     countryNewRm = newCr Map.! country
-    countryOldScore = computeScore countryOldRm scoring
-    countryNewScore = computeScore countryNewRm scoring
+    (countryOldScore,_) = computeScore countryOldRm scoring
+    (countryNewScore,_) = computeScore countryNewRm scoring
     countryDr = countryNewScore - countryOldScore
     sigmoid = 1.0 / (1.0 + exp (-countryDr))
   
@@ -436,26 +440,19 @@ evalCompOp rm op l r = op lval rval
     rval = evaluateResourceComparison rm r
 
 applyResourceUpdate :: (ResourceMap,[UpdatedResource]) -> ResourceUpdate -> (ResourceMap, [UpdatedResource])
-applyResourceUpdate (rm,updates) (RUComputedField desc field expr) =
-  if val >= 0 then
-    (Map.insert field val rm, UpdatedResource field val : updates)
-  else
-    (Map.insert field 0 rm, UpdatedResource field val : updates)
-  where
-    val = floor (evaluateResourceExpression rm expr)    
 applyResourceUpdate (rm,updates) (RUUpdatedField desc field expr) =
   if val >= 0 then
-    (Map.insert field val rm, UpdatedResource field val : updates)
+    (Map.insert field val rm, UpdatedResource desc field val : updates)
   else
-    (Map.insert field 0 rm, UpdatedResource field val : updates)
+    (Map.insert field 0 rm, UpdatedResource desc field 0 : updates)
   where
     val = floor $ evaluateResourceExpression rm expr
 applyResourceUpdate (rm,updates) (RUThreshold desc threshold field expr) =
   if evaluateResourceComparison rm threshold then
     if val >= 0 then
-      (Map.insert field val rm, UpdatedResource field val : updates)
+      (Map.insert field val rm, UpdatedResource desc field val : updates)
     else
-      (Map.insert field 0 rm, UpdatedResource field val : updates)
+      (Map.insert field 0 rm, UpdatedResource desc field 0 : updates)
   else
     (rm, updates)
   where
@@ -464,7 +461,7 @@ applyResourceUpdate (rm,updates) (RUThreshold desc threshold field expr) =
 
 applyResourceUpdates :: ResourceMap -> [ResourceUpdate] -> (ResourceMap, [UpdatedResource])
 applyResourceUpdates rm updateList =
-  (rm, reverse updates)
+  (newRM, reverse updates)
   where
     (newRM, updates) = foldl' applyResourceUpdate (rm,[]) updateList
     

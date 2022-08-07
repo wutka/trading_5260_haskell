@@ -30,7 +30,7 @@ computeSchedule :: CountryResources -> PlannerConfig -> [[ScheduleItem]]
 computeSchedule cm pc@(PlannerConfig self otherCountries depthBound frontierMaxSize numSchedules gamma scoring transforms autoTransforms _)  =
   bestSchedules
   where
-    baseScore = computeScore (cm Map.! self) scoring
+    (baseScore,_) = computeScore (cm Map.! self) scoring
     -- Compute all the schedules
     allSchedules = iterateSchedule cm pc baseScore initQueue scheduleQueue 0
     -- Convert each PlanItem to a schedule
@@ -116,6 +116,6 @@ acceptSchedule :: CountryResources -> PlannerConfig -> [ScheduleItem] -> Bool
 acceptSchedule cr (PlannerConfig self _ _ _ _ _ scoring _ _ _) schedule =
   finalScore - initialScore >= 0
   where
-    initialScore = computeScore (cr Map.! self) scoring
-    finalScore = computeScore (applySchedule cr schedule Map.! self) scoring
+    (initialScore,_) = computeScore (cr Map.! self) scoring
+    (finalScore,_) = computeScore (applySchedule cr schedule Map.! self) scoring
   

@@ -76,6 +76,7 @@ lexer ('|':'|':cs) = TokenOr : lexer cs
 
 lexer cs = error ("Unexpected token at "++cs)
 
+isNumChar :: Char -> Bool
 isNumChar ch = isDigit ch || ch == '-' || ch == '.'
 
 lexInt :: String -> [Token]

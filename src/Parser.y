@@ -9,6 +9,7 @@ import Resources
 %name opParser Operation
 %name csvLineParser CsvLine
 %name updateParser UpdateLine
+%name configLineParser ConfigLine
 
 %tokentype { Token }
 %error { parseError }
@@ -61,6 +62,11 @@ CsvLineRev : CsvLineRev ',' str { CsvString $3 : $1 }
            | int { [CsvInt $1] }
            | double { [CsvDouble $1] }
 
+ConfigLine : sym '=' str { ($1, CsvString $3) }
+    	   | sym '=' sym { ($1, CsvString $3) }
+           | sym '=' int { ($1, CsvInt $3) }
+           | sym '=' double { ($1, CsvDouble $3) }
+      
 ExpressionPart : sym { REFieldRef $1 }
              | int { REConstant (fromIntegral $1) }
              | double { REConstant $1 }
@@ -86,6 +92,5 @@ Comparison : Comparison AND Comparison { RCAnd $1 $3 }
            | NOT Comparison { RCNot $2 }
            | CompBase { $1 }
 
-UpdateLine : computedField ',' str ',' sym ',' Expression { RUComputedField $3 $5 $7 }
-           | updatedField ',' str ',' sym ',' Expression { RUUpdatedField $3 $5 $7 }
+UpdateLine : updatedField ',' str ',' sym ',' Expression { RUUpdatedField $3 $5 $7 }
            | threshold ',' str ',' Comparison ',' sym ',' Expression { RUThreshold $3 $5 $7 $9 }
