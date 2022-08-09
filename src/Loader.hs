@@ -82,21 +82,25 @@ parseScoreParameter [fieldItem,baseScore,weightItem,targetItem,CsvString "Target
                      (getCsvDouble targetItem) (getCsvString ratioField)
 parseScoreParameter x =
   error ("Unable to parse scoring parameter: "++show x)
-  
+
+-- Load the update formulas from the file
 loadUpdates :: String -> IO [ResourceUpdate]
 loadUpdates filename = do
   contents <- readFile filename
   return $ map parseUpdateLine $ filter noComments $ lines contents
 
+-- Return true is a line is a comment or blank
 noComments :: String -> Bool
 noComments [] = False
 noComments ('#':_) = False
 noComments _ = True
 
+-- Parses a line from the updates file
 parseUpdateLine :: String -> ResourceUpdate
 parseUpdateLine l =
   updateParser $ lexer l
 
+-- Loads a config.txt file as a list of String,CsvItem pairs
 loadConfigFile :: String -> IO [(String,CsvItem)]
 loadConfigFile filename = do
   contents <- readFile filename
