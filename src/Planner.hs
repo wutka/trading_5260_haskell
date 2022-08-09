@@ -113,10 +113,15 @@ makePlanItem cr pc@(PlannerConfig self otherCountries depthBound frontierMaxSize
     -- computed in a way that benefits everyone
     eu = (newP * dr) + (1.0 - newP) * (-10.0)
 
+-- Determines whether a country will accept a schedule, which is basically
+-- whether or not the schedule increases the country's score
 acceptSchedule :: CountryResources -> PlannerConfig -> [ScheduleItem] -> Bool
 acceptSchedule cr (PlannerConfig self _ _ _ _ _ scoring _ _ _) schedule =
   finalScore - initialScore >= 0
   where
+    -- Compute the score before executing the schedule
     (initialScore,_) = computeScore (cr Map.! self) scoring
+
+    -- Compute the score after executing the schedule
     (finalScore,_) = computeScore (applySchedule cr schedule Map.! self) scoring
   

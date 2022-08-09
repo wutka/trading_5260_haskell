@@ -28,6 +28,7 @@ data Operation =
   | OpTransform Transform
   deriving (Eq, Show)
 
+-- An arithmetic expression of resources
 data ResourceExpression =
     REFieldRef String
   | REAdd ResourceExpression ResourceExpression
@@ -37,6 +38,7 @@ data ResourceExpression =
   | REConstant Double
   deriving (Eq, Show)
 
+-- A boolean expression made from ResourceExpressions
 data ResourceComparison =
     RCAnd ResourceComparison ResourceComparison
   | RCOr ResourceComparison ResourceComparison
@@ -49,11 +51,13 @@ data ResourceComparison =
   | RCLessEqual ResourceExpression ResourceExpression
   deriving (Eq,Show)
 
+-- An automatic update of resources
 data ResourceUpdate =
     RUUpdatedField String String ResourceExpression
   | RUThreshold String ResourceComparison String ResourceExpression
   deriving (Eq,Show)
 
+-- A record of a resource update, used for logging
 data UpdatedResource = UpdatedResource String String Int
 
 -- An item in a schedule has an operation and an expected utility
@@ -79,6 +83,7 @@ data ScoreParameter =
   | TargetedRatioScore String Double Double Double String
   deriving (Eq, Show)
 
+-- A record of a scoring value used for logging
 data ScoreDetail =
   ScoreDetail String String Double
   
@@ -401,13 +406,15 @@ computeCountryP oldCr newCr self country scoring (OpTransfer (Transfer from to _
     countryDr = countryNewScore - countryOldScore
     sigmoid = 1.0 / (1.0 + exp (-countryDr))
   
-
+-- Evaluates an arithmetic expression
 evaluateResourceExpression :: ResourceMap -> ResourceExpression -> Double
 evaluateResourceExpression rm (REFieldRef field) = fromIntegral $ rm Map.! field
 evaluateResourceExpression _ (REConstant v) = v
 evaluateResourceExpression rm (REAdd l r) = evalExprOp rm (+) l r
 evaluateResourceExpression rm (RESubtract l r) = evalExprOp rm (-) l r
 evaluateResourceExpression rm (REMultiply l r) = evalExprOp rm (*) l r
+-- For division, instead of throwing an exception for division by 0,
+-- just return the maximum possible float value
 evaluateResourceExpression rm (REDivide l r) =
   if rval == 0.0 then
     fromIntegral $ snd $ floatRange rval
@@ -421,6 +428,7 @@ evalExprOp rm op l r = op lval rval
     lval = evaluateResourceExpression rm l
     rval = evaluateResourceExpression rm r
 
+-- Evaluate a boolean expression
 evaluateResourceComparison rm (RCGreater l r) = evalCompExprOp rm (>) l r
 evaluateResourceComparison rm (RCGreaterEqual l r) = evalCompExprOp rm (>=) l r
 evaluateResourceComparison rm (RCLess l r) = evalCompExprOp rm (<) l r
@@ -441,18 +449,28 @@ evalCompOp rm op l r = op lval rval
     lval = evaluateResourceComparison rm l
     rval = evaluateResourceComparison rm r
 
+-- Apply resource a resource update to the resource map, and record the
+-- update in an UpdatedResource structure
 applyResourceUpdate :: (ResourceMap,[UpdatedResource]) -> ResourceUpdate -> (ResourceMap, [UpdatedResource])
 applyResourceUpdate (rm,updates) (RUUpdatedField desc field expr) =
+  -- Only set the value if val is non-negative
   if val >= 0 then
     (Map.insert field val rm, UpdatedResource desc field val : updates)
+
+  -- If val is negative, set the val to 0
   else
     (Map.insert field 0 rm, UpdatedResource desc field 0 : updates)
   where
     val = floor $ evaluateResourceExpression rm expr
+    
 applyResourceUpdate (rm,updates) (RUThreshold desc threshold field expr) =
+  -- Only perform the update if the resources meet the threshold
   if evaluateResourceComparison rm threshold then
+    -- Only set the value if val is non-negative
     if val >= 0 then
       (Map.insert field val rm, UpdatedResource desc field val : updates)
+
+    -- If val is negative, set the val to 0
     else
       (Map.insert field 0 rm, UpdatedResource desc field 0 : updates)
   else
@@ -460,7 +478,7 @@ applyResourceUpdate (rm,updates) (RUThreshold desc threshold field expr) =
   where
     val = floor (evaluateResourceExpression rm expr)
       
-
+-- Apply all the resource updates to the resource map
 applyResourceUpdates :: ResourceMap -> [ResourceUpdate] -> (ResourceMap, [UpdatedResource])
 applyResourceUpdates rm updateList =
   (newRM, reverse updates)
