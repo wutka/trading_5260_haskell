@@ -148,7 +148,7 @@ main :: IO ()
 main = do
   argv <- getArgs
   -- Command-line args:
-  -- transforms-directory scoring-file resources-file self-country max-depth frontier-size num-schedules gamma
+  -- number-of-turns resources-file
   let turns = if length argv > 0 then read (head argv) else 10
   let resourcesFile = if length argv > 1 then argv !! 1 else "data/resources_part2.csv"
 
