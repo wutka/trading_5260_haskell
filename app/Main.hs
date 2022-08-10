@@ -150,7 +150,7 @@ main = do
   -- Command-line args:
   -- number-of-turns resources-file
   let turns = if length argv > 0 then read (head argv) else 10
-  let resourcesFile = if length argv > 1 then argv !! 1 else "data/resources_part2.csv"
+  let resourcesFile = if length argv > 1 then argv !! 1 else "data/nordic_countries.csv"
 
   -- Load the country resources
   (countries,nontransfer) <- loadCountryResources resourcesFile
